@@ -26,7 +26,10 @@ class HomePageViewModel: ObservableObject {
 
     /// Fetch workout templates and listen for real-time updates
     func fetchTemplatesRealtime() {
-        guard let userID = userID else { return }
+        guard let userID = userID, !userID.isEmpty else {
+            print("❌ Error: User ID is nil or empty")
+            return
+        }
         
         isLoading = true
 
@@ -64,8 +67,10 @@ class HomePageViewModel: ObservableObject {
 
     /// Delete a template from Firestore
     func deleteTemplate(templateID: String) {
-        guard let userID = userID else { return }
-
+        guard let userID = userID, !userID.isEmpty else {
+            print("❌ Error: User ID is nil or empty")
+            return
+        }
         db.collection("users").document(userID).collection("templates").document(templateID)
             .delete { [weak self] error in
                 if let error = error {
