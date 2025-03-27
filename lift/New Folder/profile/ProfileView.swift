@@ -55,13 +55,13 @@ struct ProfileView: View {
                     // Navigation Buttons
                     VStack(spacing: 12) {
                         NavigationLink(destination: MeasurementsView()) {
-                            CustomButton(title: "Measurements", color: .blue)
+                            CustomButton(title: "Measurements", color: .pink)
                         }
                         NavigationLink(destination: CalendarView()) {
-                            CustomButton(title: "View Calendar", color: .blue)
+                            CustomButton(title: "View Calendar", color: .pink)
                         }
                         NavigationLink(destination: HistoryView()) {
-                            CustomButton(title: "Workout History", color: .blue)
+                            CustomButton(title: "Workout History", color: .pink)
                         }
                     }
                     .padding(.horizontal, 20)

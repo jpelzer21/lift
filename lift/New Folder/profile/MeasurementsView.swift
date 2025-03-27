@@ -37,6 +37,12 @@ struct MeasurementsView: View {
                             .padding(.bottom, 5)
                         
                         if !measurements.isEmpty {
+                            let minWeight = measurements.map { $0.weight }.min() ?? 0
+                            let maxWeight = measurements.map { $0.weight }.max() ?? 100
+                            let padding = (maxWeight - minWeight) * 2  // 50% padding for better spacing
+                            let lowerBound = minWeight - padding
+                            let upperBound = maxWeight + padding
+
                             Chart(measurements) { entry in
                                 PointMark(
                                     x: .value("Date", entry.date, unit: .day),
@@ -44,7 +50,14 @@ struct MeasurementsView: View {
                                 )
                                 .interpolationMethod(.catmullRom)
                                 .foregroundStyle(.pink)
+                                LineMark(
+                                    x: .value("Date", entry.date, unit: .day),
+                                    y: .value("Weight", entry.weight)
+                                )
+                                .interpolationMethod(.catmullRom)
+                                .foregroundStyle(.pink)
                             }
+                            .chartYScale(domain: lowerBound...upperBound) // Dynamically set Y-axis range
                             .frame(height: 200)
                             .padding(.horizontal)
                         } else {
@@ -123,7 +136,9 @@ struct MeasurementsView: View {
                     title: Text("Overwrite Today's Weight?"),
                     message: Text("You already logged a weight (\(String(format: "%.1f", lastStoredWeight ?? 0.0)) lbs) for today. Do you want to overwrite it?"),
                     primaryButton: .destructive(Text("Overwrite")) {
-                        saveNewWeight()  // Proceed to save the new weight
+                        if let weightValue = Double(weight) {
+                            saveNewWeight(weightValue: weightValue)
+                        }
                     },
                     secondaryButton: .cancel()
                 )
@@ -212,28 +227,6 @@ struct MeasurementsView: View {
 
     // **Save weight to Firestore**
     private func saveWeight() {
-            guard let userID = Auth.auth().currentUser?.uid,
-                  let weightValue = Double(weight) else {
-                errorMessage = "Invalid weight input"
-                return
-            }
-
-            let today = Calendar.current.startOfDay(for: Date())
-
-            // Compare with last stored weight entry
-            if let lastWeight = lastStoredWeight,
-               let lastDate = lastStoredDate,
-               Calendar.current.isDate(lastDate, inSameDayAs: today),
-               lastWeight == weightValue {
-                print("Weight already logged today.")
-                return
-            }
-
-            // If the user already logged weight for today, show the alert
-            showOverwriteAlert = true
-        }
-    
-    private func saveNewWeight() {
         guard let userID = Auth.auth().currentUser?.uid,
               let weightValue = Double(weight) else {
             errorMessage = "Invalid weight input"
@@ -241,7 +234,38 @@ struct MeasurementsView: View {
         }
 
         let today = Calendar.current.startOfDay(for: Date())
+        let db = Firestore.firestore()
+        let measurementCollection = db.collection("users").document(userID).collection("measurements")
 
+        // Query Firestore for today's weight entry
+        measurementCollection
+            .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: today))
+            .whereField("date", isLessThan: Timestamp(date: Calendar.current.date(byAdding: .day, value: 1, to: today)!))
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    errorMessage = "Error checking today's entry: \(error.localizedDescription)"
+                    return
+                }
+
+                if let document = snapshot?.documents.first {
+                    // If an entry exists for today, prompt for overwrite
+                    lastStoredWeight = document.data()["weight"] as? Double
+                    lastStoredDate = today
+                    showOverwriteAlert = true
+                } else {
+                    // No entry exists, save new weight directly
+                    saveNewWeight(weightValue: weightValue)
+                }
+            }
+    }
+
+    private func saveNewWeight(weightValue: Double) {
+        guard let userID = Auth.auth().currentUser?.uid else {
+            errorMessage = "User not found"
+            return
+        }
+
+        let today = Calendar.current.startOfDay(for: Date())
         let db = Firestore.firestore()
         let measurementCollection = db.collection("users").document(userID).collection("measurements")
 
