@@ -13,3 +13,8 @@ App Features:
 	Workout history
 	Ability to track your body measurements(Weight, Height, Waist Size, Chest Size, etc)
 	Calendar showing your past workouts
+
+
+
+**had to delete the info.plist file because it had my google api key**
+
