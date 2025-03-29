@@ -27,12 +27,16 @@ struct ContentView: View {
             
             
             NavigationStack() {
-                ExerciseListView()
-                    .navigationTitle("Data Visualization")
+                NutritionView()
+                    .navigationTitle("Nutrition")
+//                ExerciseListView()
+//                    .navigationTitle("Data Visualization")
             }
             .tabItem {
-                Text("Data")
-                Image(systemName: "chart.line.uptrend.xyaxis")
+//                Text("Data")
+//                Image(systemName: "chart.line.uptrend.xyaxis")
+                Text("Nutrition")
+                Image(systemName: "fork.knife.circle")
             }
 //            .badge("12")
             .tag(1)
