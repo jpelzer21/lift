@@ -122,8 +122,11 @@ struct AddExerciseView: View {
         let db = Firestore.firestore()
         let exercisesRef = db.collection("users").document(userID).collection("exercises")
         
+        // Create document ID from exercise name
+        let documentID = exerciseName.lowercased().replacingOccurrences(of: " ", with: "_")
+        
         // Check if exercise already exists
-        exercisesRef.whereField("name", isEqualTo: exerciseName.capitalized).getDocuments { (snapshot, error) in
+        exercisesRef.document(documentID).getDocument { (document, error) in
             if let error = error {
                 print("🔥 Firestore Error: \(error.localizedDescription)")
                 errorMessage = "Error: \(error.localizedDescription)"
@@ -131,7 +134,7 @@ struct AddExerciseView: View {
                 return
             }
             
-            if let snapshot = snapshot, !snapshot.documents.isEmpty {
+            if let document = document, document.exists {
                 // Exercise already exists
                 errorMessage = "This exercise already exists."
                 isLoading = false
@@ -146,13 +149,13 @@ struct AddExerciseView: View {
                     "setCount": 0
                 ] as [String : Any]
 
-                exercisesRef.addDocument(data: newExercise) { error in
+                exercisesRef.document(documentID).setData(newExercise) { error in
                     isLoading = false
                     if let error = error {
                         print("🔥 Firestore Error: \(error.localizedDescription)")
                         errorMessage = "Error: \(error.localizedDescription)"
                     } else {
-                        print("✅ Exercise added successfully!")
+                        print("✅ Exercise added successfully with ID: \(documentID)")
                         presentationMode.wrappedValue.dismiss()
                     }
                 }

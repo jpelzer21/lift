@@ -9,115 +9,264 @@ struct ProfileView: View {
     
     @StateObject private var userViewModel = UserViewModel.shared
     
-    @State private var showingAlert = false
-    @State private var newWeight: String = ""
-    @State private var isUpdatingWeight = false
-    @State private var updateError: String?
-    @State private var existingWeightDocID: String?
-    @State private var showReplaceAlert = false
+    // State variables
+    @State private var showingLogoutAlert = false
     @State private var weightEntries: [WeightEntry] = []
-
+    
+    // UI Constants
+    private let cardPadding: CGFloat = 20
+    private let cardCornerRadius: CGFloat = 16
+    private let sectionSpacing: CGFloat = 24
+    
     var body: some View {
-        VStack(spacing: 20) {
+        NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Profile Card
-                    NavigationLink(destination: EditProfileView(userViewModel: userViewModel)) {
-                        ZStack {
-                            VStack {
-                                // Profile Image
-                                Image(systemName: "person.circle.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 100, height: 100)
-                                    .foregroundColor(.gray)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 2))
-                                
-                                // User Info
-                                VStack(spacing: 4) {
-                                    Text(userViewModel.userName)
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                    
-                                    Text(userViewModel.userEmail)
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.vertical, 5)
-                            }
-                            
-                            // Chevron Indicator
-                            HStack {
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.headline)
-                                    .foregroundColor(.gray)
-                                    .opacity(0.7)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
-                                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                        )
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                VStack(spacing: sectionSpacing) {
+                    // Profile Header
+                    profileHeaderSection
                     
-                    // Navigation Buttons
-                    VStack(spacing: 12) {
-                        NavigationLink(destination: MeasurementsView()) {
-                            CustomButton(title: "Measurements", color: .pink)
-                        }
-                        NavigationLink(destination: ExerciseListView()) {
-                            CustomButton(title: "Exercises", color: .pink)
-                        }
-                        NavigationLink(destination: CalendarView()) {
-                            CustomButton(title: "Calendar", color: .pink)
-                        }
-                        NavigationLink(destination: HistoryView()) {
-                            CustomButton(title: "History", color: .pink)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Logout Button
-                    Button {
-                        showingAlert = true
-                    } label: {
-                        CustomButton(title: "Log Out", color: .red)
-                    }
-                    .alert(isPresented: $showingAlert) {
-                        Alert(
-                            title: Text("Log Out?"),
-                            message: Text("Are you sure you want to sign out?"),
-                            primaryButton: .destructive(Text("Yes")) {
-                                signOut()
-                            },
-                            secondaryButton: .cancel()
-                        )
+                    // Quick Stats
+                    quickStatsSection
+                    
+                    // Navigation Grid
+                    navigationGridSection
+                    
+                    // Account Section
+                    accountSection
+                }
+                .padding(.vertical)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {}) {
+                        Image(systemName: "gearshape")
                     }
                 }
             }
-            Spacer()
-        }
-        .padding()
-        .refreshable {
-            userViewModel.fetchUserData()
         }
     }
     
-    // Sign Out Function
+    // MARK: - Profile Header Section
+    private var profileHeaderSection: some View {
+        NavigationLink(destination: EditProfileView(userViewModel: userViewModel)) {
+            HStack(spacing: 16) {
+                // Profile Image
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 80, height: 80)
+                    .foregroundColor(.blue)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 2))
+                
+                // User Info
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(userViewModel.userName)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text(userViewModel.userEmail)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Member since \(userViewModel.memberSince.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: cardCornerRadius)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .padding(.horizontal, cardPadding)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - Quick Stats Section
+    private var quickStatsSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Your Stats")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("See All") {}
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+            .padding(.horizontal, cardPadding)
+            
+            HStack(spacing: 12) {
+                // Workouts This Week
+                statCard(value: "\(userViewModel.workoutCount)", label: "Workouts", icon: "flame.fill", color: .orange)
+                
+                // PRs This Month
+                statCard(value: "\(userViewModel.prCount)", label: "PRs", icon: "trophy.fill", color: .yellow)
+                
+                // Current Streak
+                statCard(value: "\(userViewModel.dayStreak)", label: "Day Streak", icon: "bolt.fill", color: .green)
+            }
+            .padding(.horizontal, cardPadding)
+        }
+    }
+    
+    // MARK: - Navigation Grid Section
+    private var navigationGridSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Quick Access")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, cardPadding)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                NavigationLink(destination: MeasurementsView()) {
+                    gridButton(title: "Measurements", icon: "ruler.fill", color: .purple)
+                }
+                
+                NavigationLink(destination: ExerciseListView()) {
+                    gridButton(title: "Exercises", icon: "dumbbell.fill", color: .blue)
+                }
+                
+                NavigationLink(destination: CalendarView()) {
+                    gridButton(title: "Calendar", icon: "calendar", color: .green)
+                }
+                
+                NavigationLink(destination: HistoryView()) {
+                    gridButton(title: "History", icon: "clock.fill", color: .orange)
+                }
+            }
+            .padding(.horizontal, cardPadding)
+        }
+    }
+    
+    // MARK: - Account Section
+    private var accountSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Account")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, cardPadding)
+            
+            VStack(spacing: 0) {
+                // Help & Support
+                NavigationLink(destination: CalendarView()) {
+                    settingsRow(title: "Help & Support", icon: "questionmark.circle.fill", color: .gray)
+                }
+                
+                Divider()
+                    .padding(.leading, 52)
+                
+                // Notifications
+                NavigationLink(destination: CalendarView()) {
+                    settingsRow(title: "Notifications", icon: "bell.badge.fill", color: .red)
+                }
+                
+                Divider()
+                    .padding(.leading, 52)
+                
+                // Logout Button
+                Button(action: { showingLogoutAlert = true }) {
+                    settingsRow(title: "Log Out", icon: "arrow.left.circle.fill", color: .red)
+                }
+                .alert(isPresented: $showingLogoutAlert) {
+                    Alert(
+                        title: Text("Log Out?"),
+                        message: Text("Are you sure you want to sign out?"),
+                        primaryButton: .destructive(Text("Yes"), action: signOut),
+                        secondaryButton: .cancel()
+                    )
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: cardCornerRadius)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .padding(.horizontal, cardPadding)
+        }
+    }
+    
+    // MARK: - Component Builders
+    private func statCard(value: String, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+            }
+            
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.tertiarySystemBackground))
+        )
+    }
+    
+    private func gridButton(title: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .background(
+            RoundedRectangle(cornerRadius: cardCornerRadius)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+    
+    private func settingsRow(title: String, icon: String, color: Color) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .frame(width: 24)
+            
+            Text(title)
+                .foregroundColor(title == "Log Out" ? .red : .primary)
+            
+            Spacer()
+            
+            if title != "Log Out" {
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray.opacity(0.5))
+            }
+        }
+        .padding()
+    }
+    
+    // MARK: - Actions
     private func signOut() {
         do {
             try Auth.auth().signOut()
             UserViewModel.shared.resetUserData()
-            
             presentationMode.wrappedValue.dismiss()
+            
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let window = scene.windows.first {
                 window.rootViewController = UIHostingController(rootView: LoginView())
@@ -129,31 +278,16 @@ struct ProfileView: View {
     }
 }
 
-// **Weight Entry Model**
-struct WeightEntry: Identifiable {
-    let id = UUID()
-    let weight: Double
-    let date: Date
-}
-
-// Custom Button Modifier
-struct CustomButton: View {
-    var title: String
-    var color: Color
-    
-    var body: some View {
-        Text(title)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(color)
-            .foregroundColor(.white)
-            .cornerRadius(12)
-            .shadow(radius: 5)
-    }
-}
-
+// MARK: - Preview
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         ProfileView()
     }
+}
+
+// MARK: - Models
+struct WeightEntry: Identifiable {
+    let id = UUID()
+    let weight: Double
+    let date: Date
 }

@@ -21,10 +21,12 @@ struct NutritionView: View {
     @State private var dailySugars: Double = 0
     @State private var dailyCarbs: Double = 0
     
+    @State private var selectedIndex: Int = 0
+    
     var body: some View {
         ZStack {
             VStack {
-                TabView {
+                TabView(selection: $selectedIndex) {
                     Page3(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal)
                     
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: false)
@@ -32,6 +34,9 @@ struct NutritionView: View {
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: true)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .onChange(of: selectedIndex, { oldValue, newValue in
+                    print("selected tab = \(newValue)")
+                })
                 
                 Button("+ Add Food") {
                     showAddFoodView = true
