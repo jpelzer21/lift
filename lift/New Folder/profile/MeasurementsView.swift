@@ -57,6 +57,12 @@ struct MeasurementsView: View {
                                 .interpolationMethod(.catmullRom)
                                 .foregroundStyle(.pink)
                             }
+                            .chartXAxis {
+                                AxisMarks(position: .bottom, values: .stride(by: .day, count: 1))
+                            }
+                            .chartYAxis {
+                                AxisMarks(position: .leading, values: .automatic)
+                            }
                             .chartYScale(domain: lowerBound...upperBound) // Dynamically set Y-axis range
                             .frame(height: 200)
                             .padding(.horizontal)

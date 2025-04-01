@@ -23,30 +23,46 @@ struct ProfileView: View {
                 VStack(spacing: 20) {
                     // Profile Card
                     NavigationLink(destination: EditProfileView(userViewModel: userViewModel)) {
-                        VStack {
-                            // Profile Image
-                            Image(systemName: "person.circle.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
-                                .foregroundColor(.gray)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 2))
-
-                            // User Info
-                            Text(userViewModel.userName)
-                                .font(.title)
-                                .fontWeight(.bold)
-
-                            Text(userViewModel.userEmail)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                        ZStack {
+                            VStack {
+                                // Profile Image
+                                Image(systemName: "person.circle.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 100, height: 100)
+                                    .foregroundColor(.gray)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 2))
+                                
+                                // User Info
+                                VStack(spacing: 4) {
+                                    Text(userViewModel.userName)
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                    
+                                    Text(userViewModel.userEmail)
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.vertical, 5)
+                            }
+                            
+                            // Chevron Indicator
+                            HStack {
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                    .opacity(0.7)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(RoundedRectangle(cornerRadius: 15)
-                            .fill(colorScheme == .dark ? Color(.systemGray6) : .white))
-                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
+                                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                        )
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                     }
@@ -57,11 +73,14 @@ struct ProfileView: View {
                         NavigationLink(destination: MeasurementsView()) {
                             CustomButton(title: "Measurements", color: .pink)
                         }
+                        NavigationLink(destination: ExerciseListView()) {
+                            CustomButton(title: "Exercises", color: .pink)
+                        }
                         NavigationLink(destination: CalendarView()) {
-                            CustomButton(title: "View Calendar", color: .pink)
+                            CustomButton(title: "Calendar", color: .pink)
                         }
                         NavigationLink(destination: HistoryView()) {
-                            CustomButton(title: "Workout History", color: .pink)
+                            CustomButton(title: "History", color: .pink)
                         }
                     }
                     .padding(.horizontal, 20)
