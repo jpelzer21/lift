@@ -11,10 +11,14 @@ struct WorkoutView: View {
     @State private var showingAlert = false
     @State private var showingErrorAlert: Bool = false
     @State private var isEditingTitle: Bool = false
+    @State private var showToast = false
+    
+    @State private var isReordering = false
+    @State private var draggedExercise: Exercise?
+    @State private var dragOverIndex: Int?
 
     private let db = Firestore.firestore()
     
-
     var body: some View {
         NavigationView {
             ScrollView {
@@ -38,15 +42,50 @@ struct WorkoutView: View {
                     }
                     
                     VStack {
-                        ForEach($exercises, id: \.id) { $exercise in
-                            ExerciseView(exercise: $exercise, deleteAction: {
-                                if let index = exercises.firstIndex(where: { $0.id == exercise.id }) {
-                                    exercises.remove(at: index)
+                        ForEach(exercises.indices, id: \.self) { index in
+                            if isReordering {
+                                if dragOverIndex == index {
+                                    // Highlight the space between exercises
+                                    Rectangle()
+                                        .fill(Color.blue.opacity(0.5))
+                                        .frame(height: 8)
+                                        .transition(.opacity)
                                 }
-                            })
+                                
+                                Text(exercises[index].name)
+                                    .font(.headline)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.gray.opacity(0.2))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .onDrag {
+                                        self.draggedExercise = exercises[index]
+                                        return NSItemProvider(object: exercises[index].name as NSString)
+                                    }
+                                    .onDrop(of: [.plainText], delegate: ExerciseDropDelegate(
+                                        targetIndex: index,
+                                        exercises: $exercises,
+                                        draggedExercise: $draggedExercise,
+                                        dragOverIndex: $dragOverIndex
+                                    ))
+                            } else {
+                                ExerciseView(exercise: Binding(
+                                    get: { exercises[index] },
+                                    set: { newExercise in
+                                        exercises[index] = newExercise
+                                    }
+                                ), deleteAction: {
+                                    exercises.remove(at: index)
+                                })
+                                .onLongPressGesture {
+                                    withAnimation {
+                                        isReordering = true
+                                    }
+                                }
+                            }
                         }
-                        .listRowBackground(Color(UIColor.systemBackground))
-                        .listRowSeparator(.hidden)
+                    }
+                    if !isReordering {
                         HStack {
                             Spacer()
                             Button("Add Exercise") {
@@ -63,16 +102,35 @@ struct WorkoutView: View {
                             .padding()
                             Button("Save Template") {
                                 saveWorkoutAsTemplate()
+                                showToast = true  // Show the toast
+                                
+                                // Hide toast after 2 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    showToast = false
+                                }
                             }
                             Spacer()
                         }
                         .listRowBackground(Color(UIColor.systemBackground))
                         .listRowSeparator(.hidden)
+                    } else {
+                        Button("Done") {
+                            withAnimation {
+                                isReordering.toggle()
+                            }
+                        }
+                        .padding()
+                        .background(isReordering ? Color.green.opacity(0.3) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    .edgesIgnoringSafeArea(.all)
-                    .listStyle(GroupedListStyle())
+                    
                     
                 }
+                .overlay(
+                    toastMessage()
+                        .opacity(showToast ? 1 : 0) // Show when needed
+                        .animation(.easeInOut(duration: 0.3), value: showToast)
+                )
                 .onAppear {
                     if workoutTitle == "New Template" || workoutTitle == "New Workout" {
                         isEditingTitle = true
@@ -123,6 +181,18 @@ struct WorkoutView: View {
         }
     }
     
+    private func toastMessage() -> some View {
+        VStack {
+            Spacer()
+            Text("Template Saved ✅")
+                .padding()
+                .background(Color.green.opacity(0.8))
+                .foregroundColor(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.bottom, 50)
+        }
+    }
+    
     private func completedSets() -> Int {
         var result = 0
         for exercise in exercises {
@@ -144,8 +214,6 @@ struct WorkoutView: View {
     
     private func saveExercises() {
         print("SAVE EXERCISES() CALLED")
-        
-        
         
         guard let userID = Auth.auth().currentUser?.uid else {
             print("User not authenticated")
@@ -172,8 +240,12 @@ struct WorkoutView: View {
                 }
                 let exerciseData: [String: Any] = [
                     "name": exercise.name.capitalized,
+                    "muscleGroups": [],
+                    "barType": "",
+                    "createdBy": userID,
+                    "createdAt": Timestamp(date: Date()),
                     "lastSetDate": Timestamp(date: Date()),
-                    "setCount": FieldValue.increment(Int64(exercise.sets.filter { $0.isCompleted }.count)) // only increase if set is completed
+                    "setCount": FieldValue.increment(Int64(exercise.sets.filter { $0.isCompleted }.count))
                 ]
                             
                 
@@ -265,36 +337,62 @@ struct WorkoutView: View {
             print("Error: User not logged in")
             return
         }
-        let workoutRef = db.collection("users").document(userID)
-            .collection("templates").document() // Generates a random ID
-        var exercisesData: [[String: Any]] = []
+
+        let templatesRef = db.collection("users").document(userID).collection("templates")
         
-        for exercise in exercises {
-            var setsData: [[String: Any]] = []
-            for set in exercise.sets {
-                setsData.append([
-                    "setNum": set.number,
-                    "weight": set.weight,
-                    "reps": set.reps
-                ])
-            }
-            let exerciseData: [String: Any] = [
-                "name": exercise.name,
-                "lastSetCompleted": Timestamp(date: Date()),
-                "sets": setsData
-            ]
-            exercisesData.append(exerciseData)
-        }
-        
-        workoutRef.setData([
-            "title": workoutTitle,
-            "exercises": exercisesData,
-            "lastEdited": Timestamp(date: Date())
-        ], merge: true) { error in
+        // Step 1: Check if a template with the same title exists
+        templatesRef.whereField("title", isEqualTo: workoutTitle).getDocuments { snapshot, error in
             if let error = error {
-                print("Error saving template: \(error.localizedDescription)")
+                print("Error checking existing templates: \(error.localizedDescription)")
+                return
+            }
+            
+            let existingDoc = snapshot?.documents.first  // Get the first matching document
+            
+            // Prepare the workout data to be saved
+            var exercisesData: [[String: Any]] = []
+            for exercise in exercises {
+                var setsData: [[String: Any]] = []
+                for set in exercise.sets {
+                    setsData.append([
+                        "setNum": set.number,
+                        "weight": set.weight,
+                        "reps": set.reps
+                    ])
+                }
+                let exerciseData: [String: Any] = [
+                    "name": exercise.name,
+                    "lastSetCompleted": Timestamp(date: Date()),
+                    "sets": setsData
+                ]
+                exercisesData.append(exerciseData)
+            }
+            
+            let workoutData: [String: Any] = [
+                "title": workoutTitle,
+                "name": workoutTitle,  // Ensure "name" gets updated
+                "exercises": exercisesData,
+                "lastEdited": Timestamp(date: Date())
+            ]
+
+            if let existingDoc = existingDoc {
+                // Step 2: Update the existing template
+                templatesRef.document(existingDoc.documentID).setData(workoutData, merge: true) { error in
+                    if let error = error {
+                        print("Error updating template: \(error.localizedDescription)")
+                    } else {
+                        print("Workout template updated successfully!")
+                    }
+                }
             } else {
-                print("Workout template saved successfully!")
+                // Step 3: Create a new template if no existing one is found
+                templatesRef.document().setData(workoutData) { error in
+                    if let error = error {
+                        print("Error saving new template: \(error.localizedDescription)")
+                    } else {
+                        print("New workout template saved successfully!")
+                    }
+                }
             }
         }
     }
@@ -350,6 +448,12 @@ struct ExerciseView: View {
     private let doubleFormatter: NumberFormatter = {
         let numberFormatter = NumberFormatter()
         numberFormatter.numberStyle = .decimal
+        return numberFormatter
+    }()
+    
+    private let intFormatter: NumberFormatter = {
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .none
         return numberFormatter
     }()
 
@@ -423,7 +527,7 @@ struct ExerciseView: View {
                         
                         Spacer()
                         
-                        TextField("0", value: $set.reps, formatter: NumberFormatter())
+                        TextField("0", value: $set.reps, formatter: intFormatter)
                             .customTextFieldStyle()
                             .frame(width: 60)
                             .keyboardType(.numberPad)
@@ -453,13 +557,20 @@ struct ExerciseView: View {
 
             HStack { // add and remove sets
                 Button(action: {
-                    let newSet = ExerciseSet(
-                        number: exercise.sets.count + 1,
-                        weight: exercise.sets[exercise.sets.count-1].weight,
-                        reps: exercise.sets[exercise.sets.count-1].reps
-                    )
-                    withAnimation {
-                        exercise.sets.append(newSet)
+                    if let lastSet = exercise.sets.last {
+                        let newSet = ExerciseSet(
+                            number: exercise.sets.count + 1,
+                            weight: lastSet.weight,
+                            reps: lastSet.reps
+                        )
+                        withAnimation {
+                            exercise.sets.append(newSet)
+                        }
+                    } else {
+                        let newSet = ExerciseSet(number: 1, weight: 0, reps: 0)
+                        withAnimation {
+                            exercise.sets.append(newSet)
+                        }
                     }
                 }) {
                     HStack {
@@ -541,9 +652,40 @@ struct Triangle: Shape {
     }
 }
 
-//struct WorkoutView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        WorkoutView(workoutTitle: .constant(""), exercises: .constant([]))
-//    }
-//}
+struct ExerciseDropDelegate: DropDelegate {
+    let targetIndex: Int
+    @Binding var exercises: [Exercise]
+    @Binding var draggedExercise: Exercise?
+    @Binding var dragOverIndex: Int?
 
+    func dropEntered(info: DropInfo) {
+        if let draggedExercise = draggedExercise,
+           let fromIndex = exercises.firstIndex(where: { $0.id == draggedExercise.id }),
+           fromIndex != targetIndex {
+            dragOverIndex = targetIndex  // Highlight the space between exercises
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let draggedExercise = draggedExercise,
+              let fromIndex = exercises.firstIndex(where: { $0.id == draggedExercise.id }) else {
+            return false
+        }
+
+        if fromIndex != targetIndex {
+            withAnimation {
+                let movedExercise = exercises.remove(at: fromIndex)
+                let adjustedIndex = fromIndex < targetIndex ? targetIndex - 1 : targetIndex
+                exercises.insert(movedExercise, at: adjustedIndex)
+            }
+        }
+        
+        dragOverIndex = nil
+        self.draggedExercise = nil
+        return true
+    }
+
+    func dropExited(info: DropInfo) {
+        dragOverIndex = nil
+    }
+}
