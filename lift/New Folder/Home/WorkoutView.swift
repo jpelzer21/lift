@@ -187,6 +187,7 @@ struct WorkoutView: View {
         }.padding()
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
+            UserViewModel.shared.fetchUserExercises()
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
@@ -452,6 +453,7 @@ struct ExerciseView: View {
     @Environment(\.colorScheme) var colorScheme
     
     @Binding var exercise: Exercise
+    @State private var showingExerciseSelection = false
     @State private var showingDeleteAlert = false
     var deleteAction: () -> Void
 
@@ -473,12 +475,34 @@ struct ExerciseView: View {
         VStack(spacing: 10) {
             // Exercise Title and Delete Button
             HStack {
-                TextField("Exercise Name", text: $exercise.name)
-                    .font(.headline)
+//                TextField("Exercise Name", text: $exercise.name)
+//                    .font(.headline)
+//                    .padding(.vertical, 8)
+//                    .padding(.horizontal, 10)
+//                    .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6)))
+//                    .multilineTextAlignment(.leading)
+                
+                Button(action: {
+                    showingExerciseSelection = true
+                }) {
+                    HStack {
+                        Text(exercise.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.gray)
+                    }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6)))
-                    .multilineTextAlignment(.leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
+                    )
+                }
+                .sheet(isPresented: $showingExerciseSelection) {
+                    ExerciseSelectionView(selectedExercise: $exercise)
+                }
 
                 Button {
                     showingDeleteAlert = true

@@ -1,3 +1,12 @@
+//
+//  ExerciseSelectionView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/1/25.
+//
+
+import SwiftUI
+
 struct ExerciseSelectionView: View {
     @Environment(\.presentationMode) var presentationMode
     @ObservedObject var userViewModel = UserViewModel.shared

@@ -21,6 +21,8 @@ class UserViewModel: ObservableObject {
     // Profile Completion
     @Published var profileCompletion: Double = 0
     
+    @Published var userExercises: [Exercise] = []
+    
     static let shared = UserViewModel()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
@@ -183,6 +185,25 @@ class UserViewModel: ObservableObject {
             "workoutCount": FieldValue.increment(Int64(1)),
             "lastWorkoutDate": Timestamp(date: Date())
         ], merge: true)
+    }
+    
+    func fetchUserExercises() {
+        guard let userID = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        db.collection("users").document(userID).collection("exercises")
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching exercises: \(error.localizedDescription)")
+                    return
+                }
+                
+                self.userExercises = snapshot?.documents.compactMap { doc in
+                    let data = doc.data()
+                    let name = data["name"] as? String ?? ""
+                    return Exercise(name: name, sets: [ExerciseSet(number: 1, weight: 0, reps: 0)])
+                } ?? []
+            }
     }
     
     // MARK: - Reset
