@@ -33,9 +33,6 @@ class HomePageViewModel: ObservableObject {
         
         isLoading = true
 
-        // Remove previous listener if it exists
-        listener?.remove()
-
         listener = db.collection("users").document(userID).collection("templates")
             .order(by: "lastEdited", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -51,6 +48,7 @@ class HomePageViewModel: ObservableObject {
                 self.templates = snapshot?.documents.compactMap { doc in
                     let data = doc.data()
                     let name = data["title"] as? String ?? ""
+//                    let name = doc.documentID.replacingOccurrences(of: "_", with: " ").capitalized
                     let exercises = (data["exercises"] as? [[String: Any]])?.compactMap { exerciseDict -> Exercise? in
                         guard let name = exerciseDict["name"] as? String else { return nil }
                         let sets = (exerciseDict["sets"] as? [[String: Any]])?.compactMap { setDict -> ExerciseSet? in
@@ -73,24 +71,19 @@ class HomePageViewModel: ObservableObject {
             print("❌ Error: User ID is nil or empty")
             return
         }
-<<<<<<< HEAD
-        
-        // Optimistically remove from UI before Firebase completes deletion
-        DispatchQueue.main.async {
-            self.templates.removeAll { $0.id == templateID }
-        }
-
-=======
->>>>>>> main
         db.collection("users").document(userID).collection("templates").document(templateID)
-            .delete { error in
+            .delete { [weak self] error in
                 if let error = error {
                     print("❌ Error deleting template: \(error.localizedDescription)")
-                    self.fetchTemplatesRealtime() // Restore if deletion failed
+                } else {
+                    DispatchQueue.main.async {
+                        self?.templates.removeAll { $0.id == templateID }
+                    }
                 }
             }
     }
 
+    /// Stop listening to Firestore updates when the ViewModel is deinitialized
     deinit {
         listener?.remove()
     }

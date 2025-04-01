@@ -72,7 +72,6 @@ struct ProfileView: View {
                     VStack(spacing: 12) {
                         NavigationLink(destination: MeasurementsView()) {
                             CustomButton(title: "Measurements", color: .pink)
-<<<<<<< HEAD
                         }
                         NavigationLink(destination: ExerciseListView()) {
                             CustomButton(title: "Exercises", color: .pink)
@@ -82,14 +81,6 @@ struct ProfileView: View {
                         }
                         NavigationLink(destination: HistoryView()) {
                             CustomButton(title: "History", color: .pink)
-=======
-                        }
-                        NavigationLink(destination: CalendarView()) {
-                            CustomButton(title: "View Calendar", color: .pink)
-                        }
-                        NavigationLink(destination: HistoryView()) {
-                            CustomButton(title: "Workout History", color: .pink)
->>>>>>> main
                         }
                     }
                     .padding(.horizontal, 20)

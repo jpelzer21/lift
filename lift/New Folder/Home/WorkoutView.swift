@@ -345,7 +345,6 @@ struct WorkoutView: View {
             if let error = error {
                 print("Error checking existing templates: \(error.localizedDescription)")
                 return
-<<<<<<< HEAD
             }
             
             let existingDoc = snapshot?.documents.first  // Get the first matching document
@@ -369,31 +368,6 @@ struct WorkoutView: View {
                 exercisesData.append(exerciseData)
             }
             
-=======
-            }
-            
-            let existingDoc = snapshot?.documents.first  // Get the first matching document
-            
-            // Prepare the workout data to be saved
-            var exercisesData: [[String: Any]] = []
-            for exercise in exercises {
-                var setsData: [[String: Any]] = []
-                for set in exercise.sets {
-                    setsData.append([
-                        "setNum": set.number,
-                        "weight": set.weight,
-                        "reps": set.reps
-                    ])
-                }
-                let exerciseData: [String: Any] = [
-                    "name": exercise.name,
-                    "lastSetCompleted": Timestamp(date: Date()),
-                    "sets": setsData
-                ]
-                exercisesData.append(exerciseData)
-            }
-            
->>>>>>> main
             let workoutData: [String: Any] = [
                 "title": workoutTitle,
                 "name": workoutTitle,  // Ensure "name" gets updated
@@ -678,6 +652,7 @@ struct Triangle: Shape {
     }
 }
 
+
 struct ExerciseDropDelegate: DropDelegate {
     let targetIndex: Int
     @Binding var exercises: [Exercise]
@@ -698,29 +673,6 @@ struct ExerciseDropDelegate: DropDelegate {
             return false
         }
 
-<<<<<<< HEAD
-=======
-struct ExerciseDropDelegate: DropDelegate {
-    let targetIndex: Int
-    @Binding var exercises: [Exercise]
-    @Binding var draggedExercise: Exercise?
-    @Binding var dragOverIndex: Int?
-
-    func dropEntered(info: DropInfo) {
-        if let draggedExercise = draggedExercise,
-           let fromIndex = exercises.firstIndex(where: { $0.id == draggedExercise.id }),
-           fromIndex != targetIndex {
-            dragOverIndex = targetIndex  // Highlight the space between exercises
-        }
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        guard let draggedExercise = draggedExercise,
-              let fromIndex = exercises.firstIndex(where: { $0.id == draggedExercise.id }) else {
-            return false
-        }
-
->>>>>>> main
         if fromIndex != targetIndex {
             withAnimation {
                 let movedExercise = exercises.remove(at: fromIndex)

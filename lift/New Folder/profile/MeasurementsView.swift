@@ -39,11 +39,7 @@ struct MeasurementsView: View {
                         if !measurements.isEmpty {
                             let minWeight = measurements.map { $0.weight }.min() ?? 0
                             let maxWeight = measurements.map { $0.weight }.max() ?? 100
-<<<<<<< HEAD
-                            let padding = (maxWeight - minWeight) * 2
-=======
                             let padding = (maxWeight - minWeight) * 2  // 50% padding for better spacing
->>>>>>> main
                             let lowerBound = minWeight - padding
                             let upperBound = maxWeight + padding
 
@@ -60,7 +56,6 @@ struct MeasurementsView: View {
                                 )
                                 .interpolationMethod(.catmullRom)
                                 .foregroundStyle(.pink)
-<<<<<<< HEAD
                             }
                             .chartXAxis {
                                 AxisMarks(position: .bottom, values: .stride(by: .day, count: 1))
@@ -68,11 +63,7 @@ struct MeasurementsView: View {
                             .chartYAxis {
                                 AxisMarks(position: .leading, values: .automatic)
                             }
-                            .chartYScale(domain: lowerBound...upperBound)
-=======
-                            }
                             .chartYScale(domain: lowerBound...upperBound) // Dynamically set Y-axis range
->>>>>>> main
                             .frame(height: 200)
                             .padding(.horizontal)
                         } else {
@@ -261,7 +252,6 @@ struct MeasurementsView: View {
                     errorMessage = "Error checking today's entry: \(error.localizedDescription)"
                     return
                 }
-<<<<<<< HEAD
 
                 if let document = snapshot?.documents.first {
                     // If an entry exists for today, prompt for overwrite
@@ -275,21 +265,6 @@ struct MeasurementsView: View {
             }
     }
 
-=======
-
-                if let document = snapshot?.documents.first {
-                    // If an entry exists for today, prompt for overwrite
-                    lastStoredWeight = document.data()["weight"] as? Double
-                    lastStoredDate = today
-                    showOverwriteAlert = true
-                } else {
-                    // No entry exists, save new weight directly
-                    saveNewWeight(weightValue: weightValue)
-                }
-            }
-    }
-
->>>>>>> main
     private func saveNewWeight(weightValue: Double) {
         guard let userID = Auth.auth().currentUser?.uid else {
             errorMessage = "User not found"
