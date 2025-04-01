@@ -19,7 +19,6 @@ struct WorkoutView: View {
 
     private let db = Firestore.firestore()
     
-
     var body: some View {
         NavigationView {
             ScrollView {
@@ -216,8 +215,6 @@ struct WorkoutView: View {
     private func saveExercises() {
         print("SAVE EXERCISES() CALLED")
         
-        
-        
         guard let userID = Auth.auth().currentUser?.uid else {
             print("User not authenticated")
             return
@@ -243,8 +240,12 @@ struct WorkoutView: View {
                 }
                 let exerciseData: [String: Any] = [
                     "name": exercise.name.capitalized,
+                    "muscleGroups": [],
+                    "barType": "",
+                    "createdBy": userID,
+                    "createdAt": Timestamp(date: Date()),
                     "lastSetDate": Timestamp(date: Date()),
-                    "setCount": FieldValue.increment(Int64(exercise.sets.filter { $0.isCompleted }.count)) // only increase if set is completed
+                    "setCount": FieldValue.increment(Int64(exercise.sets.filter { $0.isCompleted }.count))
                 ]
                             
                 
@@ -449,6 +450,12 @@ struct ExerciseView: View {
         numberFormatter.numberStyle = .decimal
         return numberFormatter
     }()
+    
+    private let intFormatter: NumberFormatter = {
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .none
+        return numberFormatter
+    }()
 
     var body: some View {
         VStack(spacing: 10) {
@@ -520,7 +527,7 @@ struct ExerciseView: View {
                         
                         Spacer()
                         
-                        TextField("0", value: $set.reps, formatter: NumberFormatter())
+                        TextField("0", value: $set.reps, formatter: intFormatter)
                             .customTextFieldStyle()
                             .frame(width: 60)
                             .keyboardType(.numberPad)
@@ -550,13 +557,20 @@ struct ExerciseView: View {
 
             HStack { // add and remove sets
                 Button(action: {
-                    let newSet = ExerciseSet(
-                        number: exercise.sets.count + 1,
-                        weight: exercise.sets[exercise.sets.count-1].weight,
-                        reps: exercise.sets[exercise.sets.count-1].reps
-                    )
-                    withAnimation {
-                        exercise.sets.append(newSet)
+                    if let lastSet = exercise.sets.last {
+                        let newSet = ExerciseSet(
+                            number: exercise.sets.count + 1,
+                            weight: lastSet.weight,
+                            reps: lastSet.reps
+                        )
+                        withAnimation {
+                            exercise.sets.append(newSet)
+                        }
+                    } else {
+                        let newSet = ExerciseSet(number: 1, weight: 0, reps: 0)
+                        withAnimation {
+                            exercise.sets.append(newSet)
+                        }
                     }
                 }) {
                     HStack {
@@ -638,11 +652,6 @@ struct Triangle: Shape {
     }
 }
 
-//struct WorkoutView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        WorkoutView(workoutTitle: .constant(""), exercises: .constant([]))
-//    }
-//}
 
 struct ExerciseDropDelegate: DropDelegate {
     let targetIndex: Int

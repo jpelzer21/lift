@@ -1,15 +1,16 @@
 import SwiftUI
- import FirebaseFirestore
- import FirebaseAuth
+import FirebaseFirestore
+import FirebaseAuth
  
 struct HomePageView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var viewModel = HomePageViewModel()
-
+    
     @State private var showWorkoutView = false
     @State private var selectedExercises: [Exercise] = []
     @State private var selectedWorkoutTitle: String = "Empty Workout"
     @State private var showDeleteButton = false
+    
     
     var body: some View {
         ScrollView {
@@ -137,13 +138,11 @@ struct HomePageView: View {
                             }
                         }.padding(.leading, 20).padding(.vertical, 10)
                     }
-
                     Spacer()
-
                 }
-
                 Spacer()
             }
+            
         }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView) {
@@ -153,6 +152,7 @@ struct HomePageView: View {
             viewModel.fetchTemplatesRealtime()
         }
     }
+    
 }
  
  struct WorkoutTemplate: Identifiable {
