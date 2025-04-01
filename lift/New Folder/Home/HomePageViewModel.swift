@@ -73,12 +73,15 @@ class HomePageViewModel: ObservableObject {
             print("❌ Error: User ID is nil or empty")
             return
         }
+<<<<<<< HEAD
         
         // Optimistically remove from UI before Firebase completes deletion
         DispatchQueue.main.async {
             self.templates.removeAll { $0.id == templateID }
         }
 
+=======
+>>>>>>> main
         db.collection("users").document(userID).collection("templates").document(templateID)
             .delete { error in
                 if let error = error {
