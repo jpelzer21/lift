@@ -1,10 +1,4 @@
-
-
-
-
-
 import SwiftUI
-
 struct FoodDetailPopup: View {
     
     @State var updatefood: Bool
@@ -16,7 +10,6 @@ struct FoodDetailPopup: View {
         ZStack {
             Color.black.opacity(0.3)
                 .edgesIgnoringSafeArea(.all)
-
             VStack(spacing: 20) {
                 if let imageUrl = foodItem.imageUrl, let url = URL(string: imageUrl) {
                     AsyncImage(url: url) { phase in
@@ -39,7 +32,6 @@ struct FoodDetailPopup: View {
                         }
                     }
                 }
-
                 VStack {
                     Text(foodItem.name)
                         .font(.title)
@@ -83,7 +75,6 @@ struct FoodDetailPopup: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 60)
-
                 HStack {
                     Button(action: {
                         if foodItem.servings > 1 {
@@ -97,10 +88,8 @@ struct FoodDetailPopup: View {
                             .foregroundColor(.white)
                             .clipShape(Circle())
                     }
-
                     Text("Servings: \(foodItem.servings)")
                         .font(.headline)
-
                     Button(action: {
                         foodItem.servings += 1
                         print(foodItem.servings)
@@ -113,7 +102,6 @@ struct FoodDetailPopup: View {
                             .clipShape(Circle())
                     }
                 }
-
                 HStack(spacing: 20) {
                     Button("Cancel") {
                         isPresented = false
@@ -123,7 +111,6 @@ struct FoodDetailPopup: View {
                     .background(Color.red)
                     .foregroundColor(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-
                     if updatefood {
                         Button("Save") {
                             onAddFood(foodItem)
@@ -161,3 +148,5 @@ struct FoodDetailPopup: View {
     
     
 }
+
+

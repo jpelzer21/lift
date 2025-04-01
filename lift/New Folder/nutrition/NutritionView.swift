@@ -1,5 +1,4 @@
 import SwiftUI
-
 struct NutritionView: View {
     @State private var foodsEaten: [FoodItem] = UserDefaultsManager.loadFoods()
     @State private var showAddFoodView: Bool = false
@@ -21,12 +20,10 @@ struct NutritionView: View {
     @State private var dailySugars: Double = 0
     @State private var dailyCarbs: Double = 0
     
-    @State private var selectedIndex: Int = 0
-    
     var body: some View {
         ZStack {
             VStack {
-                TabView(selection: $selectedIndex) {
+                TabView {
                     Page3(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal)
                     
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: false)
@@ -34,9 +31,6 @@ struct NutritionView: View {
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: true)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .onChange(of: selectedIndex, { oldValue, newValue in
-                    print("selected tab = \(newValue)")
-                })
                 
                 Button("+ Add Food") {
                     showAddFoodView = true
@@ -119,10 +113,6 @@ struct NutritionView: View {
         dailyCarbs = foodsEaten.reduce(0) { $0 + ($1.carbs ?? 0)*(Double($1.servings)) }
     }
 }
-
-
-
-
 struct Page1: View {
     @Binding var dailyCalories: Double
     @Binding var dailyProtein: Double
@@ -173,9 +163,6 @@ struct Page1: View {
         }
     }
 }
-
-
-
 struct Page3: View {
     @Binding var dailyCalories: Double
     @Binding var dailyProtein: Double
@@ -253,7 +240,6 @@ struct Page3: View {
         .padding()
     }
 }
-
 struct ProgressLineView: View {
     @Binding var value: Double
     @Binding var total: Double
@@ -281,15 +267,12 @@ struct ProgressLineView: View {
 //                    .foregroundStyle(LinearGradient(colors: [.red, .yellow, .green], startPoint: .leading, endPoint: .trailing))
             }
             .frame(width: 100)
-
             Text("\(Int(value))/\(Int(total))g")
                 .font(.caption)
                 .foregroundColor(.gray)
         }
     }
 }
-
-
 struct ProgressCircleView: View {
     var progress: Double
     var amount: Double
@@ -327,9 +310,6 @@ struct ProgressCircleView: View {
         .frame(width: size, height: size)
     }
 }
-
-
-
 class UserDefaultsManager {
     static let foodKey = "foodsEaten"
     static let dateKey = "lastSavedDate"
@@ -340,17 +320,14 @@ class UserDefaultsManager {
             saveCurrentDate() // Save the date whenever food is updated
         }
     }
-
     static func loadFoods() -> [FoodItem] {
         checkForNewDay() // Check if it's a new day before loading foods
-
         if let data = UserDefaults.standard.data(forKey: foodKey),
            let decoded = try? JSONDecoder().decode([FoodItem].self, from: data) {
             return decoded
         }
         return []
     }
-
     static func saveCurrentDate() {
         let today = Date()
         let formatter = DateFormatter()
@@ -358,30 +335,20 @@ class UserDefaultsManager {
         let dateString = formatter.string(from: today)
         UserDefaults.standard.set(dateString, forKey: dateKey)
     }
-
     static func checkForNewDay() {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-
         let todayString = formatter.string(from: Date())
         let lastSavedDate = UserDefaults.standard.string(forKey: dateKey) ?? ""
-
         if todayString != lastSavedDate {
             resetFoods() // Reset the food list if it's a new day
         }
     }
-
     static func resetFoods() {
         UserDefaults.standard.removeObject(forKey: foodKey)
         saveCurrentDate() // Update date to today so reset happens only once per day
     }
 }
-
-
-
-
-
-
 struct FoodItem: Identifiable, Codable {
     var id = UUID()
     let servingSize: String
@@ -394,3 +361,5 @@ struct FoodItem: Identifiable, Codable {
     let imageUrl: String?
     var servings: Int = 1
 }
+
+

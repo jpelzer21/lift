@@ -36,7 +36,7 @@ struct ProfileView: View {
                 }
                 .padding(.vertical)
             }
-            .background(Color(.systemGroupedBackground))
+//            .background(Color(.systemGroupedBackground))
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -116,6 +116,7 @@ struct ProfileView: View {
                 // Current Streak
                 statCard(value: "\(userViewModel.dayStreak)", label: "Day Streak", icon: "bolt.fill", color: .green)
             }
+            
             .padding(.horizontal, cardPadding)
         }
     }
@@ -195,8 +196,9 @@ struct ProfileView: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: cardCornerRadius)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color(colorScheme == .dark ? Color(.systemGray6) : .white))
             )
+            .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
             .padding(.horizontal, cardPadding)
         }
     }
@@ -219,26 +221,32 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity)
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.tertiarySystemBackground))
+            RoundedRectangle(cornerRadius: cardCornerRadius)
+                .fill(Color(colorScheme == .dark ? Color(.systemGray6) : .white))
         )
+        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
     
     private func gridButton(title: String, icon: String, color: Color) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .foregroundStyle(Color(colorScheme == .dark ? .white : .black))
         }
         .frame(maxWidth: .infinity, minHeight: 100)
         .background(
-            RoundedRectangle(cornerRadius: cardCornerRadius)
-                .fill(Color(.secondarySystemBackground))
-        )
+                RoundedRectangle(cornerRadius: cardCornerRadius)
+                    .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cardCornerRadius)
+                            .stroke(color.opacity(0.5), lineWidth: 2) // Border with slight transparency
+                    )
+            )
     }
     
     private func settingsRow(title: String, icon: String, color: Color) -> some View {
