@@ -7,6 +7,7 @@ struct GraphView: View {
     @State private var exerciseSets: [ExerciseSet] = []
     @State private var selectedMetric: Metric = .volume
     @State private var isLoading = true
+    @State private var showInfo = false
     let exerciseName: String
     
     enum Metric: String, CaseIterable {
@@ -57,76 +58,93 @@ struct GraphView: View {
         let firstSets = exerciseSets.filter { $0.number == 1 }
 //        ScrollView{
             VStack (spacing: 5) {
-                
                 Spacer()
-                
-                VStack {
-                    Text(exerciseName.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.largeTitle)
-                        .bold()
-                        .padding()
-                    
-                    
-                    Picker("Metric", selection: $selectedMetric) {
-                        ForEach(Metric.allCases, id: \.self) { metric in
-                            Text(metric.rawValue).tag(metric)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding()
-                    if isLoading {
-                        ProgressView("Loading exercise data...")
+                ZStack {
+                    HStack {
+                        Spacer()
+                        Text(exerciseName.replacingOccurrences(of: "_", with: " ").capitalized)
+                            .font(.largeTitle)
+                            .bold()
+                            .lineLimit(nil)
+                            .minimumScaleFactor(0.8)
+                            .multilineTextAlignment(.center)
                             .padding()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 60)
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showInfo = true
+                        }) {
+                            Image(systemName: "info.circle")
+                                .font(.title2)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.trailing, 20)
+                    }
+                }
+                
+                
+                Picker("Metric", selection: $selectedMetric) {
+                    ForEach(Metric.allCases, id: \.self) { metric in
+                        Text(metric.rawValue).tag(metric)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+                if isLoading {
+                    ProgressView("Loading exercise data...")
+                        .padding()
+                } else {
+                    if exerciseSets.isEmpty {
+                        VStack {
+                            Spacer()
+                            Text("No recorded sets for this exercise.")
+                                .foregroundColor(.gray)
+                            Spacer()
+                        }
                     } else {
-                        if exerciseSets.isEmpty {
-                            VStack {
-                                Spacer()
-                                Text("No recorded sets for this exercise.")
-                                    .foregroundColor(.gray)
-                                Spacer()
+                        if firstSets.count > 1 {
+                            Chart {
+                                ForEach(exerciseSets) { set in
+                                    PointMark(
+                                        x: .value("Date", set.date),
+                                        y: .value(selectedMetric.rawValue,
+                                                  selectedMetric == .weight ? set.weight :
+                                                    selectedMetric == .reps ? Double(set.reps) :
+                                                    set.weight * Double(set.reps))
+                                    )
+                                    .symbol(.circle)
+                                    .opacity(1/Double(set.number))
+                                    .foregroundStyle(Color.pink)
+                                }
+                                
+                                ForEach(Array(firstSets.enumerated()), id: \.element.id) { index, set in
+                                    LineMark(
+                                        x: .value("Date", set.date),
+                                        y: .value(selectedMetric.rawValue, metricValue(for: set))
+                                    )
+                                    .foregroundStyle(Color.pink)
+                                    .lineStyle(StrokeStyle(lineWidth: 2))
+                                }
+                                
                             }
+                            .chartXAxis {
+                                AxisMarks(position: .bottom) {
+                                    AxisValueLabel(format: .dateTime.month().day())
+                                }
+                            }
+                            .chartYAxis {
+                                AxisMarks(position: .trailing)
+                            }
+                            .chartYScale(domain: minYAxisValue...maxYAxisValue)
+                            .frame(height: 250)
+                            .padding()
                         } else {
-                            if firstSets.count > 1 {
-                                Chart {
-                                    ForEach(exerciseSets) { set in
-                                        PointMark(
-                                            x: .value("Date", set.date),
-                                            y: .value(selectedMetric.rawValue,
-                                                      selectedMetric == .weight ? set.weight :
-                                                        selectedMetric == .reps ? Double(set.reps) :
-                                                        set.weight * Double(set.reps))
-                                        )
-                                        .symbol(.circle)
-                                        .opacity(1/Double(set.number))
-                                        .foregroundStyle(Color.pink)
-                                    }
-                                    
-                                    ForEach(Array(firstSets.enumerated()), id: \.element.id) { index, set in
-                                        LineMark(
-                                            x: .value("Date", set.date),
-                                            y: .value(selectedMetric.rawValue, metricValue(for: set))
-                                        )
-                                        .foregroundStyle(Color.pink)
-                                        .lineStyle(StrokeStyle(lineWidth: 2))
-                                    }
-                                    
-                                }
-                                .chartXAxis {
-                                    AxisMarks(position: .bottom) {
-                                        AxisValueLabel(format: .dateTime.month().day())
-                                    }
-                                }
-                                .chartYAxis {
-                                    AxisMarks(position: .trailing)
-                                }
-                                .chartYScale(domain: minYAxisValue...maxYAxisValue)
-                                .frame(height: 300)
+                            Text("Not enough data to display a trend.")
+                                .foregroundColor(.gray)
                                 .padding()
-                            } else {
-                                Text("Not enough data to display a trend.")
-                                    .foregroundColor(.gray)
-                                    .padding()
-                            }
                         }
                     }
                 }
@@ -175,8 +193,10 @@ struct GraphView: View {
                     }
                 }
                 .padding()
-                
-//                Spacer()
+            }
+            .sheet(isPresented: $showInfo) {
+                GraphInfoView()
+                    .presentationDetents([.medium, .large])
             }
             .onAppear {
                 fetchSets(name: exerciseName)
@@ -235,5 +255,30 @@ struct GraphView: View {
                 print("Loaded \(self.exerciseSets.count) sets.")
             }
         }
+    }
+}
+
+
+struct GraphInfoView: View {
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Graph Explanation")
+                .font(.title)
+                .bold()
+            
+            Text("📍 **Dots** represent individual sets, with opacity decreasing for later sets in the same session.\n\n📈 **Line** represents the trend of first sets in each session.\n\n⚖️ **Y-Axis** depends on the selected metric: Weight, Reps, or Volume (Weight × Reps).")
+                .font(.body)
+                .multilineTextAlignment(.leading)
+                .padding()
+            
+            Spacer()
+            
+            Button("Got it!") {
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
     }
 }

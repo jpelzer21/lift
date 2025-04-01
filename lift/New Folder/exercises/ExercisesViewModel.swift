@@ -30,16 +30,16 @@ class ExercisesViewModel: ObservableObject {
         var query: Query = db.collection("users").document(userID).collection("exercises")
 
         switch selectedSortOption {
-        case "Most Recent":
-            query = query.order(by: "lastSetDate", descending: true)
-        case "Most Sets":
-            query = query.order(by: "setCount", descending: true)
-        case "Alphabetical A-Z":
-            query = query.order(by: "name", descending: false)
-        case "Alphabetical Z-A":
-            query = query.order(by: "name", descending: true)
-        default:
-            break
+            case "Most Recent":
+                query = query.order(by: "lastSetDate", descending: true)
+            case "Most Sets":
+                query = query.order(by: "setCount", descending: true)
+            case "Alphabetical A-Z":
+                query = query.order(by: "name", descending: false) // Ensure name sorting works
+            case "Alphabetical Z-A":
+                query = query.order(by: "name", descending: true)
+            default:
+                query = query.order(by: "name", descending: false) // Default to A-Z ordering
         }
 
         listener?.remove()
@@ -65,18 +65,43 @@ class ExercisesViewModel: ObservableObject {
 
     func deleteExercise(named name: String) {
         print("DELETE EXERCISE() CALLED")
-        guard let userID = userID else { return }
-
+        guard let userID = userID else {
+            print("No user logged in.")
+            return
+        }
+        
+        print("Attempting to delete exercise: \(name)")
+        
         let db = Firestore.firestore()
-        db.collection("users").document(userID).collection("exercises").document(name).delete { error in
+        let exercisesRef = db.collection("users").document(userID).collection("exercises")
+
+        // Query for exercises with the specified name
+        exercisesRef.whereField("name", isEqualTo: name).getDocuments { snapshot, error in
             if let error = error {
-                print("Error deleting exercise: \(error.localizedDescription)")
-            } else {
-                print(name)
-                DispatchQueue.main.async {
-                    self.exercises.removeAll { $0.name == name }
+                print("Error fetching exercise to delete: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                print("No exercise found with name: \(name)")
+                return
+            }
+            
+            // Assuming there is only one document with that name, delete it
+            for document in documents {
+                exercisesRef.document(document.documentID).delete { error in
+                    if let error = error {
+                        print("Error deleting exercise: \(error.localizedDescription)")
+                    } else {
+                        print("Exercise \(name) deleted successfully.")
+                        // Remove from the exercises array immediately to update the UI
+                        self.exercises.removeAll { exercise in
+                            exercise.name == name
+                        }
+                    }
                 }
             }
         }
     }
+    
 }

@@ -11,7 +11,7 @@ struct AddExerciseView: View {
     @State private var errorMessage: String?
     
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-    let barTypeOptions = ["Barbell", "EZ-Bar", "Dumbbell", "Machine", "Hex-Bar", "Kettlebell", "Other"]
+    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "Other"]
     
     init(existingExerciseName: String? = nil, existingMuscleGroups: [String]? = nil, existingBarType: String? = nil) {
         _exerciseName = State(initialValue: existingExerciseName ?? "")
@@ -21,7 +21,7 @@ struct AddExerciseView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {  // 🔥 Wrap everything in a ScrollView
+            ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
                     TextField("Exercise Name", text: $exerciseName)
@@ -29,21 +29,18 @@ struct AddExerciseView: View {
                         .padding(.horizontal)
                         .padding(.top, 10) // Extra padding to avoid keyboard overlap
                     
-                    VStack {
+                    VStack(alignment: .leading) {
                         Text("Select Bar Type:")
                             .font(.headline)
-                            .padding(.horizontal)
                         
                         Picker("Bar Type", selection: $barType) {
                             ForEach(barTypeOptions, id: \.self) { type in
                                 Text(type)
-                                    .font(.caption)
                             }
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .padding()
+                        .pickerStyle(MenuPickerStyle()) // ⬅️ This creates a dropdown menu
                     }
-                    .padding(.vertical, 10)
+                    .padding(.horizontal)
                     
                     Text("Select Muscle Groups:")
                         .font(.headline)
