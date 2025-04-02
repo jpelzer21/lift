@@ -16,5 +16,3 @@ App Features:
 
 
 
-**had to delete the info.plist file because it had my google api key**
-
