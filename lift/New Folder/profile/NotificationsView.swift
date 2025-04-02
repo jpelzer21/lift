@@ -1,3 +1,11 @@
+
+//  NotificationsView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/2/25.
+
+
+
 import SwiftUI
 
 struct NotificationsView: View {

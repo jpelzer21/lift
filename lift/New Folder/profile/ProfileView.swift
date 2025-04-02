@@ -168,7 +168,7 @@ struct ProfileView: View {
             
             VStack(spacing: 0) {
                 // Help & Support
-                NavigationLink(destination: CalendarView()) {
+                NavigationLink(destination: HelpAndSupportView()) {
                     settingsRow(title: "Help & Support", icon: "questionmark.circle.fill", color: .gray)
                 }
                 
@@ -176,7 +176,7 @@ struct ProfileView: View {
                     .padding(.leading, 52)
                 
                 // Notifications
-                NavigationLink(destination: CalendarView()) {
+                NavigationLink(destination: NotificationsView()) {
                     settingsRow(title: "Notifications", icon: "bell.badge.fill", color: .red)
                 }
                 

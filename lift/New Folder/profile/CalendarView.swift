@@ -15,6 +15,7 @@ struct CalendarView: View {
     
     // Track scroll position
 //    @State private var scrollViewProxy: ScrollViewProxy?
+    private let currentDate = Date()
     private let currentMonth: Int = Calendar.current.component(.month, from: Date())
 
     private var months: [Int: [Date]] {
@@ -67,10 +68,29 @@ struct CalendarView: View {
                                     }
                                     
                                     ForEach(days, id: \.self) { date in
+                                        let isCurrentDay = calendar.isDate(date, inSameDayAs: currentDate)
+                                        let isWorkoutDay = workoutDates.contains(date)
+                                        
                                         Text("\(calendar.component(.day, from: date))")
                                             .frame(width: 40, height: 40)
-                                            .background(workoutDates.contains(date) ? Color.pink.opacity(0.8) : Color.gray.opacity(0.2)) // Highlight workout days
-                                            .clipShape(Circle())
+                                            .background(
+                                                ZStack {
+                                                    // Current day indicator (blue border)
+                                                    if isCurrentDay {
+                                                        Circle()
+                                                            .stroke(Color.blue, lineWidth: 2)
+                                                    }
+                                                    // Workout day background (pink)
+                                                    if isWorkoutDay {
+                                                        Circle()
+                                                            .fill(Color.pink.opacity(0.8))
+                                                    } else {
+                                                        Circle()
+                                                            .fill(Color.gray.opacity(0.2))
+                                                    }
+                                                }
+                                            )
+//                                            .foregroundColor(isCurrentDay ? .blue : .primary)
                                             .onTapGesture {
                                                 selectedDate = date
                                                 print(date)
