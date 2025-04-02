@@ -4,10 +4,13 @@ import FirebaseAuth
 
 struct WorkoutView: View {
     @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject private var userViewModel: UserViewModel
     
     @Binding var workoutTitle: String
     @Binding var exercises: [Exercise]
     
+    @State private var isLoading = false
+    @State private var error: Error?
     @State private var showingAlert = false
     @State private var showingErrorAlert: Bool = false
     @State private var isEditingTitle: Bool = false
@@ -222,229 +225,62 @@ struct WorkoutView: View {
     
     
     private func saveExercises() {
-        print("SAVE EXERCISES() CALLED")
-        
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("User not authenticated")
-            return
-        }
-        
-        for exercise in exercises {
-            // Define the document reference for the exercise
-            let exerciseRef = db.collection("users")
-                                .document(userID)
-                                .collection("exercises")
-                                .document(exercise.name.lowercased().replacingOccurrences(of: " ", with: "_"))
-                        
-                        // Check if the exercise document exists
-            exerciseRef.getDocument { (document, error) in
+            isLoading = true
+            userViewModel.saveExercises(exercises: exercises) { error in
+                isLoading = false
                 if let error = error {
-                    print("Error checking exercise document: \(error.localizedDescription)")
-                    return
-                }
-                
-                if let document = document, document.exists {
-                    // If document exists, we don't need to add the name field
-                    print("\(exercise.name) already exists in the database.")
-                }
-                let exerciseData: [String: Any] = [
-                    "name": exercise.name.capitalized,
-                    "muscleGroups": [],
-                    "barType": "",
-                    "createdBy": userID,
-                    "createdAt": Timestamp(date: Date()),
-                    "lastSetDate": Timestamp(date: Date()),
-                    "setCount": FieldValue.increment(Int64(exercise.sets.filter { $0.isCompleted }.count))
-                ]
-                            
-                
-                exerciseRef.setData(exerciseData, merge: true) { error in
-                    if let error = error {
-                        print("Error adding name for \(exercise.name): \(error.localizedDescription)")
-                    } else {
-                        print("Name added for \(exercise.name)!")
-                    }
-                }
-                
-            }
-            
-            // Add the sets data as before
-            for set in exercise.sets {
-                if set.isCompleted {
-                    let newSetRef = exerciseRef.collection("sets").document() // Generates a random ID
-                    
-                    let setData: [String: Any] = [
-                        "date": Timestamp(date: Date()),
-                        "setNum": set.number,
-                        "weight": set.weight,
-                        "reps": set.reps
-                    ]
-                    
-                    newSetRef.setData(setData) { error in
-                        if let error = error {
-                            print("Error writing \(exercise.name) set: \(error.localizedDescription)")
-                        } else {
-                            print("Set added for \(exercise.name): \(setData)")
-                        }
-                    }
+                    self.error = error
+                    print("Error saving exercises: \(error.localizedDescription)")
+                } else {
+                    print("Exercises saved successfully")
                 }
             }
         }
-    }
-    
-    private func saveWorkout() {
-        print("SAVE WORKOUTS() CALLED")
-        guard let user = Auth.auth().currentUser else {
-            print("User not authenticated")
-            return
-        }
-
-        let workoutRef = db.collection("users").document(user.uid).collection("workouts").document() // Generates a random ID
-
-        print("Saving workout with title: \(workoutTitle)")
-
-        var exerciseDetails: [[String: Any]] = []
-
-        for exercise in exercises {
-            guard !exercise.sets.isEmpty else { continue }
-
-            // Find the set with the largest rep count
-            if let maxRepSet = exercise.sets.max(by: { $0.reps < $1.reps }) {
-                let exerciseData: [String: Any] = [
-                    "name": exercise.name,
-                    "sets": exercise.sets.count,  // Total number of sets
-                    "reps": maxRepSet.reps        // Maximum reps in a single set
-                ]
-                exerciseDetails.append(exerciseData)
-            }
-        }
-
-        // If no exercises have sets, don't save the workout
-        guard !exerciseDetails.isEmpty else {
-            print("Workout not saved because no exercises contain sets.")
-            return
-        }
-
-        let workoutData: [String: Any] = [
-            "title": workoutTitle,
-            "timestamp": Timestamp(date: Date()),
-            "exercises": exerciseDetails
-        ]
-
-        workoutRef.setData(workoutData) { error in
-            if let error = error {
-                print("Error saving workout: \(error.localizedDescription)")
-            } else {
-                print("Workout saved successfully with ID: \(workoutRef.documentID)")
-            }
-        }
-    }
-    
-    private func saveWorkoutAsTemplate() {
-        print("SAVE WORKOUT AS TEMPLATE() CALLED")
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("Error: User not logged in")
-            return
-        }
-
-        let templatesRef = db.collection("users").document(userID).collection("templates")
         
-        // Step 1: Check if a template with the same title exists
-        templatesRef.whereField("title", isEqualTo: workoutTitle).getDocuments { snapshot, error in
-            if let error = error {
-                print("Error checking existing templates: \(error.localizedDescription)")
-                return
-            }
-            
-            let existingDoc = snapshot?.documents.first  // Get the first matching document
-            
-            // Prepare the workout data to be saved
-            var exercisesData: [[String: Any]] = []
-            for exercise in exercises {
-                var setsData: [[String: Any]] = []
-                for set in exercise.sets {
-                    setsData.append([
-                        "setNum": set.number,
-                        "weight": set.weight,
-                        "reps": set.reps
-                    ])
-                }
-                let exerciseData: [String: Any] = [
-                    "name": exercise.name,
-                    "lastSetCompleted": Timestamp(date: Date()),
-                    "sets": setsData
-                ]
-                exercisesData.append(exerciseData)
-            }
-            
-            let workoutData: [String: Any] = [
-                "title": workoutTitle,
-                "exercises": exercisesData,
-                "lastEdited": Timestamp(date: Date())
-            ]
-
-            if let existingDoc = existingDoc {
-                // Step 2: Update the existing template
-                templatesRef.document(existingDoc.documentID).setData(workoutData, merge: true) { error in
-                    if let error = error {
-                        print("Error updating template: \(error.localizedDescription)")
-                    } else {
-                        print("Workout template updated successfully!")
-                        showToast = true  // Show the toast
-                        
-                        // Hide toast after 2 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            showToast = false
-                        }
-                    }
-                }
-            } else {
-                // Step 3: Create a new template if no existing one is found
-                templatesRef.document().setData(workoutData) { error in
-                    if let error = error {
-                        print("Error saving new template: \(error.localizedDescription)")
-                    } else {
-                        print("New workout template saved successfully!")
-                    }
+        private func saveWorkout() {
+            isLoading = true
+            userViewModel.saveWorkout(title: workoutTitle, exercises: exercises) { error in
+                isLoading = false
+                if let error = error {
+                    self.error = error
+                    print("Error saving workout: \(error.localizedDescription)")
+                } else {
+                    print("Workout saved successfully")
                 }
             }
         }
-    }
-    
-    private func loadWorkoutTemplate() {
-        print("LOAD WORKOUT TEMPLATE() CALLED")
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("Error: User not logged in")
-            return
-        }
-        let workoutRef = db.collection("users").document(userID)
-            .collection("templates").document(workoutTitle.replacingOccurrences(of: "_", with: " ").capitalized(with: .autoupdatingCurrent))
         
-        workoutRef.getDocument { (document, error) in
-            if let error = error {
-                print("Error loading template: \(error.localizedDescription)")
-                return
-            }
-
-            if let document = document, document.exists, let data = document.data(),
-               let exercisesData = data["exercises"] as? [[String: Any]] {
-                
-                exercises = exercisesData.compactMap { exerciseDict in
-                    guard let name = exerciseDict["name"] as? String,
-                          let setsData = exerciseDict["sets"] as? [[String: Any]] else { return nil }
+        private func saveWorkoutAsTemplate() {
+            isLoading = true
+            userViewModel.saveWorkoutAsTemplate(title: workoutTitle, exercises: exercises) { isUpdate, error in
+                isLoading = false
+                if let error = error {
+                    self.error = error
+                    print("Error saving template: \(error.localizedDescription)")
+                } else {
+                    showToast = true
+                    print("Template \(isUpdate ? "updated" : "saved") successfully")
                     
-                    let sets = setsData.compactMap { setDict -> ExerciseSet? in
-                        guard let setNum = setDict["setNum"] as? Int,
-                              let weight = setDict["weight"] as? Double,
-                              let reps = setDict["reps"] as? Int else { return nil }
-                        return ExerciseSet(number: setNum, weight: weight, reps: reps)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        showToast = false
                     }
-
-                    return Exercise(name: name, sets: sets)
                 }
             }
         }
-    }
+        
+        private func loadWorkoutTemplate() {
+            isLoading = true
+            userViewModel.loadWorkoutTemplate(title: workoutTitle) { exercises, error in
+                isLoading = false
+                if let error = error {
+                    self.error = error
+                    print("Error loading template: \(error.localizedDescription)")
+                } else if let exercises = exercises {
+                    self.exercises = exercises
+                    print("Template loaded successfully")
+                }
+            }
+        }
 }
 
 
@@ -490,6 +326,8 @@ struct ExerciseView: View {
                         Text(exercise.name)
                             .font(.headline)
                             .foregroundColor(.primary)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                         Spacer()
                         Image(systemName: "chevron.down")
                             .foregroundColor(.gray)

@@ -184,7 +184,10 @@ struct ProfileView: View {
                     .padding(.leading, 52)
                 
                 // Logout Button
-                Button(action: { showingLogoutAlert = true }) {
+                Button(action: {
+                    showingLogoutAlert = true
+                    
+                }) {
                     settingsRow(title: "Log Out", icon: "arrow.left.circle.fill", color: .red)
                 }
                 .alert(isPresented: $showingLogoutAlert) {
