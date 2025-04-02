@@ -8,15 +8,14 @@ import SwiftUI
 
 struct ContentView: View {    
     @State private var selectedIndex: Int = 0
-    @State private var templates: [WorkoutTemplate] = [] // Store templates
-    @State private var isTemplatesLoaded = false // Track if templates are loaded
+//    @State private var templates: [WorkoutTemplate] = [] // Store templates
+//    @State private var isTemplatesLoaded = false // Track if templates are loaded
     @StateObject private var userViewModel = UserViewModel.shared
 
     var body: some View {
         TabView(selection: $selectedIndex) {
             NavigationStack {
                 HomePageView()
-                
                     .navigationTitle("Home")
             }
             .tabItem {
@@ -25,24 +24,19 @@ struct ContentView: View {
                     .renderingMode(.template)
             }
             .tag(0)
+            .environmentObject(userViewModel)
             
             
             NavigationStack() {
                 NutritionView()
                     .navigationTitle("Nutrition")
-//                ExerciseListView()
-//                    .navigationTitle("Data Visualization")
             }
             .tabItem {
-//                Text("Data")
-//                Image(systemName: "chart.line.uptrend.xyaxis")
                 Text("Nutrition")
                 Image(systemName: "fork.knife.circle")
             }
-//            .badge("12")
             .tag(1)
-            .navigationBarTitleDisplayMode(.inline)
-
+            .environmentObject(userViewModel)
 
             
             
@@ -63,7 +57,6 @@ struct ContentView: View {
             UITabBar.appearance().backgroundColor = UIColor.systemBackground
             UITabBar.appearance().unselectedItemTintColor = .systemBrown
             UITabBarItem.appearance().badgeColor = .systemPink
-//            UITabBar.appearance().backgroundColor = .systemGray4.withAlphaComponent(0.4)
             UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: UIColor.systemPink]
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance

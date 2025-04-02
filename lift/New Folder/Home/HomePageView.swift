@@ -4,7 +4,8 @@ import FirebaseAuth
  
 struct HomePageView: View {
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var viewModel = HomePageViewModel()
+//    @StateObject private var viewModel = HomePageViewModel()
+    @EnvironmentObject private var viewModel: UserViewModel
     
     @State private var showWorkoutView = false
     @State private var selectedExercises: [Exercise] = []
