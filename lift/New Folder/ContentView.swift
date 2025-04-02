@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var selectedIndex: Int = 0
     @State private var templates: [WorkoutTemplate] = [] // Store templates
     @State private var isTemplatesLoaded = false // Track if templates are loaded
+    @StateObject private var userViewModel = UserViewModel.shared
 
     var body: some View {
         TabView(selection: $selectedIndex) {
@@ -53,6 +54,7 @@ struct ContentView: View {
                 Label("Profile", systemImage: "person.crop.circle.fill")
             }
             .tag(2)
+            .environmentObject(userViewModel)
             
         }
         .tint(.pink)

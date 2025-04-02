@@ -7,7 +7,8 @@ struct ProfileView: View {
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
     
-    @StateObject private var userViewModel = UserViewModel.shared
+//    @StateObject private var userViewModel = UserViewModel.shared
+    @EnvironmentObject private var userViewModel: UserViewModel
     
     // State variables
     @State private var showingLogoutAlert = false

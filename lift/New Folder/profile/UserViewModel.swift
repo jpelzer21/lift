@@ -41,7 +41,6 @@ class UserViewModel: ObservableObject {
         guard let user = Auth.auth().currentUser else { return }
         
         let userRef = db.collection("users").document(user.uid)
-        let statsRef = db.collection("userStats").document(user.uid)
         
         // Fetch basic user data
         userRef.getDocument { [weak self] snapshot, error in
@@ -59,29 +58,29 @@ class UserViewModel: ObservableObject {
                 self.calculateProfileCompletion()
             }
         }
-        
-        // Fetch stats data
-        statsRef.getDocument { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                print("❌ Error fetching stats: \(error.localizedDescription)")
-                return
-            }
-            
-            guard let data = snapshot?.data() else { return }
-            
-            DispatchQueue.main.async {
-                self.updateStats(from: data)
-            }
-        }
+//        
+//        // Fetch stats data
+//        statsRef.getDocument { [weak self] snapshot, error in
+//            guard let self = self else { return }
+//            
+//            if let error = error {
+//                print("❌ Error fetching stats: \(error.localizedDescription)")
+//                return
+//            }
+//            
+//            guard let data = snapshot?.data() else { return }
+//            
+//            DispatchQueue.main.async {
+//                self.updateStats(from: data)
+//            }
+//        }
     }
     
     // MARK: - Realtime Updates
     private func setupRealtimeListener() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
-        listener = db.collection("userStats").document(userID)
+        listener = db.collection("users").document(userID)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -90,11 +89,14 @@ class UserViewModel: ObservableObject {
                     return
                 }
                 
-                guard let data = snapshot?.data() else { return }
-                
-                DispatchQueue.main.async {
-                    self.updateStats(from: data)
+                guard let data = snapshot?.data() else {
+                    print("No data received from listener")
+                    return
                 }
+                
+                print("Received stats update: \(data)") // Debug print
+                
+                self.updateStats(from: data)
             }
     }
     
@@ -197,12 +199,19 @@ class UserViewModel: ObservableObject {
     }
     
     private func updateStats(from data: [String: Any]) {
-        self.workoutCount = data["workoutCount"] as? Int ?? 0
-        self.prCount = data["prCount"] as? Int ?? 0
-        self.dayStreak = data["dayStreak"] as? Int ?? 0
+        let newWorkoutCount = data["workoutCount"] as? Int ?? 0
+        let newPrCount = data["prCount"] as? Int ?? 0
+        let newDayStreak = data["dayStreak"] as? Int ?? 0
         
-        // Update streak if needed
-        self.updateStreakIfNeeded()
+        // Only update if values changed to avoid unnecessary view refreshes
+        if newWorkoutCount != workoutCount || newPrCount != prCount || newDayStreak != dayStreak {
+            DispatchQueue.main.async { [weak self] in
+                self?.workoutCount = newWorkoutCount
+                self?.prCount = newPrCount
+                self?.dayStreak = newDayStreak
+                // No need to manually send objectWillChange as @Published properties do this automatically
+            }
+        }
     }
     
     private func updateStreakIfNeeded() {
