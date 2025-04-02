@@ -273,10 +273,10 @@ struct FoodRowView: View {
 struct BarcodeScannerView: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var onScan: (String) -> Void
-    @State private var timer: Timer?
     
     class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         var parent: BarcodeScannerView
+        var captureSession: AVCaptureSession?
         
         init(parent: BarcodeScannerView) {
             self.parent = parent
@@ -285,13 +285,16 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
         func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
             if let metadataObject = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
                let scannedValue = metadataObject.stringValue {
-                // Cancel any pending timeout
-                self.parent.timer?.invalidate()
-                
                 DispatchQueue.main.async {
                     self.parent.onScan(scannedValue)
-                    self.parent.isPresented = false // Dismiss on successful scan
+                    self.parent.isPresented = false
                 }
+            }
+        }
+        
+        func setupFailed() {
+            DispatchQueue.main.async {
+                self.parent.isPresented = false
             }
         }
     }
@@ -302,62 +305,56 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = UIViewController()
-        setupScanner(for: viewController, context: context)
+        let coordinator = context.coordinator
         
-        // Start timeout timer (dismiss after 15 seconds if no scan)
-        timer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false) { _ in
-            DispatchQueue.main.async {
-                self.isPresented = false
-            }
-        }
-        
-        return viewController
-    }
-    
-    private func setupScanner(for viewController: UIViewController, context: Context) {
+        // Setup capture session
         let captureSession = AVCaptureSession()
+        coordinator.captureSession = captureSession
         
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
             print("❌ No camera found")
-            isPresented = false
-            return
+            coordinator.setupFailed()
+            return viewController
         }
         
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice),
               captureSession.canAddInput(videoInput) else {
             print("❌ Failed to initialize camera input")
-            isPresented = false
-            return
+            coordinator.setupFailed()
+            return viewController
         }
         
         captureSession.addInput(videoInput)
         
         let metadataOutput = AVCaptureMetadataOutput()
-        if captureSession.canAddOutput(metadataOutput) {
-            captureSession.addOutput(metadataOutput)
-            metadataOutput.setMetadataObjectsDelegate(context.coordinator, queue: DispatchQueue.main)
-            metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128, .upce, .qr]
-        } else {
+        guard captureSession.canAddOutput(metadataOutput) else {
             print("❌ Failed to initialize metadata output")
-            isPresented = false
-            return
+            coordinator.setupFailed()
+            return viewController
         }
         
+        captureSession.addOutput(metadataOutput)
+        metadataOutput.setMetadataObjectsDelegate(coordinator, queue: DispatchQueue.main)
+        metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128]
+        
+        // Setup preview layer
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.videoGravity = .resizeAspectFill
         previewLayer.frame = viewController.view.layer.bounds
-        
         viewController.view.layer.addSublayer(previewLayer)
         
+        // Start session on background thread
         DispatchQueue.global(qos: .userInitiated).async {
             captureSession.startRunning()
         }
+        
+        return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        // No state modifications here
         if !isPresented {
-            (uiViewController.view.layer.sublayers?.first as? AVCaptureVideoPreviewLayer)?.session?.stopRunning()
-            timer?.invalidate()
+            context.coordinator.captureSession?.stopRunning()
         }
     }
 }
