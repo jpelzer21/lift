@@ -11,7 +11,7 @@ struct AddExerciseView: View {
     @State private var errorMessage: String?
     
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "Other"]
+    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "BodyWeight", "Other"]
     
     init(existingExerciseName: String? = nil, existingMuscleGroups: [String]? = nil, existingBarType: String? = nil) {
         _exerciseName = State(initialValue: existingExerciseName ?? "")
@@ -82,7 +82,7 @@ struct AddExerciseView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                     }
-                    .disabled(exerciseName.isEmpty || selectedMuscleGroups.isEmpty)
+                    .disabled(exerciseName.isEmpty)
                     .padding()
 
                     Spacer()

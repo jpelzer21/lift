@@ -19,7 +19,7 @@ struct ProfileView: View {
     private let sectionSpacing: CGFloat = 24
     
     var body: some View {
-        NavigationView {
+        VStack {
             ScrollView {
                 VStack(spacing: sectionSpacing) {
                     // Profile Header
@@ -37,8 +37,8 @@ struct ProfileView: View {
                 .padding(.vertical)
             }
 //            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            
+//            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {}) {
@@ -47,6 +47,7 @@ struct ProfileView: View {
                 }
             }
         }
+        .navigationTitle("Profile")
     }
     
     // MARK: - Profile Header Section

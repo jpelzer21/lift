@@ -98,6 +98,81 @@ class UserViewModel: ObservableObject {
             }
     }
     
+    
+    func fetchExercises(completion: (() -> Void)? = nil) {
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("User not authenticated")
+            completion?()
+            return
+        }
+        
+        db.collection("users").document(userID).collection("exercises")
+            .order(by: "name") // Alphabetical ordering
+            .getDocuments { [weak self] snapshot, error in
+                guard let self = self else {
+                    completion?()
+                    return
+                }
+                
+                if let error = error {
+                    print("❌ Error fetching exercises: \(error.localizedDescription)")
+                    completion?()
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    print("No exercises found")
+                    completion?()
+                    return
+                }
+                
+                let fetchedExercises = documents.compactMap { doc -> Exercise? in
+                    let data = doc.data()
+                    return self.parseExerciseDocument(docID: doc.documentID, data: data)
+                }
+                
+                DispatchQueue.main.async {
+                    self.userExercises = fetchedExercises
+                    completion?()
+                }
+            }
+    }
+
+    private func parseExerciseDocument(docID: String, data: [String: Any]) -> Exercise? {
+        guard let name = data["name"] as? String else {
+            print("Exercise missing name field")
+            return nil
+        }
+        
+        let muscleGroups = data["muscleGroups"] as? [String] ?? []
+        let barType = data["barType"] as? String ?? "Barbell"
+        let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        let setCount = data["setCount"] as? Int ?? 0
+        
+        // If you have exercise sets stored in Firestore
+        var sets: [ExerciseSet] = []
+        if let setsData = data["sets"] as? [[String: Any]] {
+            sets = setsData.compactMap { setData in
+                guard let number = setData["number"] as? Int,
+                      let weight = setData["weight"] as? Double,
+                      let reps = setData["reps"] as? Int else {
+                    return nil
+                }
+                return ExerciseSet(number: number, weight: weight, reps: reps)
+            }.sorted { $0.number < $1.number }
+        }
+        
+        return Exercise(
+            name: name,
+            muscleGroups: muscleGroups,
+            barType: barType,
+            sets: sets,
+            createdAt: createdAt,
+            setCount: setCount
+        )
+    }
+    
+    
     // MARK: - Data Processing
     private func updateBasicInfo(from data: [String: Any]) {
         self.userName = data["name"] as? String ?? "No Name"

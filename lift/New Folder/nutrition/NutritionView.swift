@@ -1,4 +1,5 @@
 import SwiftUI
+
 struct NutritionView: View {
     @State private var foodsEaten: [FoodItem] = UserDefaultsManager.loadFoods()
     @State private var showAddFoodView: Bool = false
@@ -31,6 +32,7 @@ struct NutritionView: View {
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: true)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 300)
                 
                 Button("+ Add Food") {
                     showAddFoodView = true
@@ -51,6 +53,7 @@ struct NutritionView: View {
                                 Spacer()
                                 Text("\(String(format: "%.1f", (food.calories ?? 0.0) * Double(food.servings))) cal")
                             }
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedFood = food
                                 print(food.servings)
@@ -60,6 +63,7 @@ struct NutritionView: View {
                         }
                         .onDelete(perform: deleteFood)
                     }
+                    .zIndex(1)
                     
                 }
             }

@@ -113,12 +113,6 @@ struct WorkoutView: View {
                                 .padding()
                                 Button("Save Template") {
                                     saveWorkoutAsTemplate()
-                                    showToast = true  // Show the toast
-                                    
-                                    // Hide toast after 2 seconds
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                        showToast = false
-                                    }
                                 }
                                 Spacer()
                             }
@@ -137,11 +131,6 @@ struct WorkoutView: View {
                         
                         
                     }
-                    .overlay(
-                        toastMessage()
-                            .opacity(showToast ? 1 : 0) // Show when needed
-                            .animation(.easeInOut(duration: 0.3), value: showToast)
-                    )
                     .onAppear {
                         if workoutTitle == "New Template" || workoutTitle == "New Workout" {
                             isEditingTitle = true
@@ -150,6 +139,11 @@ struct WorkoutView: View {
                     }
                     .ignoresSafeArea(.all)
                 }
+                .overlay(
+                    toastMessage()
+                        .opacity(showToast ? 1 : 0) // Show when needed
+                        .animation(.easeInOut(duration: 0.3), value: showToast)
+                )
             }
             
             .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
@@ -168,6 +162,8 @@ struct WorkoutView: View {
                         saveWorkout()
                         saveExercises()
                         presentationMode.wrappedValue.dismiss()
+                        // Hide toast after 2 seconds
+                        
                     },
                     secondaryButton: .cancel(Text("Stay"))
                 )
@@ -383,7 +379,6 @@ struct WorkoutView: View {
             
             let workoutData: [String: Any] = [
                 "title": workoutTitle,
-                "name": workoutTitle,  // Ensure "name" gets updated
                 "exercises": exercisesData,
                 "lastEdited": Timestamp(date: Date())
             ]
@@ -395,6 +390,12 @@ struct WorkoutView: View {
                         print("Error updating template: \(error.localizedDescription)")
                     } else {
                         print("Workout template updated successfully!")
+                        showToast = true  // Show the toast
+                        
+                        // Hide toast after 2 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showToast = false
+                        }
                     }
                 }
             } else {
@@ -651,8 +652,20 @@ struct ExerciseView: View {
 struct Exercise: Identifiable {
     let id = UUID()
     var name: String
+    var muscleGroups: [String] = []
+    var barType: String = "Barbell"
     var sets: [ExerciseSet] = [ExerciseSet(number: 1, weight: 0, reps: 0)]
+    var createdAt: Date = Date()
+    var setCount: Int = 0
     var allSetsCompleted: Bool = false
+    
+//    id: docID,
+//    name: name,
+//    muscleGroups: muscleGroups,
+//    barType: barType,
+//    sets: sets,
+//    createdAt: createdAt,
+//    setCount: setCount
 }
 
 

@@ -46,8 +46,10 @@ struct AddFoodView: View {
                 } else {
                     List {
                         ForEach(searchResults, id: \.id) { result in
+                            let _ = print("Rendering item: \(result.name)") // Debug print
                             FoodRowView(food: result)
                                 .onTapGesture {
+                                    print("Tapped item with name: \(result.name)")
                                     self.selectedFood = result
                                     self.isPopupPresented = true
                                 }
@@ -264,12 +266,14 @@ struct FoodRowView: View {
            Spacer()
        }
        .padding(.vertical, 8)
+       .contentShape(Rectangle())
    }
 }
 // MARK: - Barcode Scanner View
 struct BarcodeScannerView: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var onScan: (String) -> Void
+    @State private var timer: Timer?
     
     class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         var parent: BarcodeScannerView
@@ -281,8 +285,12 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
         func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
             if let metadataObject = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
                let scannedValue = metadataObject.stringValue {
+                // Cancel any pending timeout
+                self.parent.timer?.invalidate()
+                
                 DispatchQueue.main.async {
                     self.parent.onScan(scannedValue)
+                    self.parent.isPresented = false // Dismiss on successful scan
                 }
             }
         }
@@ -293,16 +301,33 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
     }
     
     func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = UIViewController()
+        setupScanner(for: viewController, context: context)
+        
+        // Start timeout timer (dismiss after 15 seconds if no scan)
+        timer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false) { _ in
+            DispatchQueue.main.async {
+                self.isPresented = false
+            }
+        }
+        
+        return viewController
+    }
+    
+    private func setupScanner(for viewController: UIViewController, context: Context) {
         let captureSession = AVCaptureSession()
+        
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
             print("❌ No camera found")
-            return UIViewController()
+            isPresented = false
+            return
         }
         
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice),
               captureSession.canAddInput(videoInput) else {
             print("❌ Failed to initialize camera input")
-            return UIViewController()
+            isPresented = false
+            return
         }
         
         captureSession.addInput(videoInput)
@@ -311,33 +336,29 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
         if captureSession.canAddOutput(metadataOutput) {
             captureSession.addOutput(metadataOutput)
             metadataOutput.setMetadataObjectsDelegate(context.coordinator, queue: DispatchQueue.main)
-            metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128] // Common barcode formats
+            metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128, .upce, .qr]
         } else {
             print("❌ Failed to initialize metadata output")
-            return UIViewController()
+            isPresented = false
+            return
         }
         
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.videoGravity = .resizeAspectFill
+        previewLayer.frame = viewController.view.layer.bounds
         
-        let viewController = UIViewController()
-        let view = UIView(frame: UIScreen.main.bounds)
-        view.layer.addSublayer(previewLayer)
-        previewLayer.frame = view.layer.bounds
-        viewController.view = view
+        viewController.view.layer.addSublayer(previewLayer)
         
         DispatchQueue.global(qos: .userInitiated).async {
             captureSession.startRunning()
         }
-        
-        return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         if !isPresented {
             (uiViewController.view.layer.sublayers?.first as? AVCaptureVideoPreviewLayer)?.session?.stopRunning()
+            timer?.invalidate()
         }
     }
 }
-
 
