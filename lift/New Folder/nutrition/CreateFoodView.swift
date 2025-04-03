@@ -1,3 +1,11 @@
+//
+//  CreateFoodView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/2/25.
+//
+
+
 import SwiftUI
 
 struct CreateFoodView: View {
@@ -10,7 +18,7 @@ struct CreateFoodView: View {
     @State private var carbs: String = ""
     @State private var sugars: String = ""
     
-    var onFoodAdded: (FoodItem) -> Void
+//    var onFoodAdded: (FoodItem) -> Void
     
     var body: some View {
         NavigationView {
@@ -62,7 +70,7 @@ struct CreateFoodView: View {
             imageUrl: nil
         )
         
-        onFoodAdded(newFood)
+//        onFoodAdded(newFood)
         presentationMode.wrappedValue.dismiss()
     }
 }

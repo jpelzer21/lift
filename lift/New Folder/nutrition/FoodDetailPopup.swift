@@ -4,6 +4,7 @@ struct FoodDetailPopup: View {
     @State var updatefood: Bool
     @Binding var foodItem: FoodItem
     @Binding var isPresented: Bool
+
     var onAddFood: (FoodItem) -> Void
     
     var body: some View {

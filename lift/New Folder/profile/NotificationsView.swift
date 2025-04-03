@@ -22,13 +22,13 @@ struct NotificationsView: View {
                 Toggle("Email Notifications", isOn: $emailNotificationsEnabled)
                 
                 Toggle("Workout Reminders", isOn: $workoutRemindersEnabled)
-                    .onChange(of: workoutRemindersEnabled) { enabled in
-                        if enabled {
-                            // Schedule reminder notification
-                        } else {
-                            // Cancel reminder notification
-                        }
-                    }
+                    .onChange(of: workoutRemindersEnabled, { oldValue, newValue in
+//                        if enabled {
+//                            // Schedule reminder notification
+//                        } else {
+//                            // Cancel reminder notification
+//                        }
+                    })
                 
                 if workoutRemindersEnabled {
                     DatePicker("Reminder Time", selection: $reminderTime, displayedComponents: .hourAndMinute)

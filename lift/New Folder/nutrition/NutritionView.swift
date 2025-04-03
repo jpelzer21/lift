@@ -7,6 +7,8 @@ struct NutritionView: View {
     @State private var selectedFood: FoodItem? = nil
     @State private var servings: Int = 1
     
+    @State private var selectedTabIndex: Int = 0
+    
     // Nutrition Goals (could be user-specific in the future)
     @State private var calorieGoal: Double = 2000
     @State private var proteinGoal: Double = 200
@@ -24,16 +26,22 @@ struct NutritionView: View {
     var body: some View {
         ZStack {
             VStack {
-                TabView {
+                TabView(selection: $selectedTabIndex) {
                     Page3(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal)
+                        .tag(0)
                     
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: false)
+                        .tag(1)
                     
                     Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: true)
+                        .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: 300)
-                
+                .onChange(of: selectedTabIndex, { oldValue, newValue in
+                    UserDefaultsManager.saveSelectedTabIndex(newValue)
+                })
+    
                 Button("+ Add Food") {
                     showAddFoodView = true
                 }
@@ -71,6 +79,7 @@ struct NutritionView: View {
                 AddFoodView(onFoodAdded: addFoodToDailyTotal)
             }
             .onAppear {
+                selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
             }
@@ -317,6 +326,7 @@ struct ProgressCircleView: View {
 class UserDefaultsManager {
     static let foodKey = "foodsEaten"
     static let dateKey = "lastSavedDate"
+    static let tabIndexKey = "selectedTabIndex"
     
     static func saveFoods(_ foods: [FoodItem]) {
         if let encoded = try? JSONEncoder().encode(foods) {
@@ -352,7 +362,14 @@ class UserDefaultsManager {
         UserDefaults.standard.removeObject(forKey: foodKey)
         saveCurrentDate() // Update date to today so reset happens only once per day
     }
+    static func saveSelectedTabIndex(_ index: Int) {
+        UserDefaults.standard.set(index, forKey: tabIndexKey)
+    }
+    static func loadSelectedTabIndex() -> Int {
+        return UserDefaults.standard.integer(forKey: tabIndexKey) // Default to 0 if not found
+    }
 }
+
 struct FoodItem: Identifiable, Codable {
     var id = UUID()
     let servingSize: String

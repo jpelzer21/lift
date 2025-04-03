@@ -8,6 +8,8 @@ struct GraphView: View {
     @State private var selectedMetric: Metric = .volume
     @State private var isLoading = true
     @State private var showInfo = false
+    @State private var showEditExerciseView = false
+    
     let exerciseName: String
     
     enum Metric: String, CaseIterable {
@@ -71,8 +73,17 @@ struct GraphView: View {
                             .padding()
                         Spacer()
                     }
-                    .padding(.horizontal, 60)
+                    .padding(.horizontal, 20)
+                    
                     HStack {
+                        Button(action: {
+                            showEditExerciseView = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal, 20)
                         Spacer()
                         Button(action: {
                             showInfo = true
@@ -81,7 +92,7 @@ struct GraphView: View {
                                 .font(.title2)
                                 .foregroundColor(.gray)
                         }
-                        .padding(.trailing, 20)
+                        .padding(.horizontal, 20)
                     }
                 }
                 
@@ -93,6 +104,7 @@ struct GraphView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
+                
                 if isLoading {
                     ProgressView("Loading exercise data...")
                         .padding()
@@ -193,6 +205,9 @@ struct GraphView: View {
                     }
                 }
                 .padding()
+            }
+            .sheet(isPresented: $showEditExerciseView) {
+                EditExerciseView()
             }
             .sheet(isPresented: $showInfo) {
                 GraphInfoView()

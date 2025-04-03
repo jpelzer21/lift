@@ -37,16 +37,6 @@ struct ProfileView: View {
                 }
                 .padding(.vertical)
             }
-//            .background(Color(.systemGroupedBackground))
-            
-//            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {}) {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
         }
         .navigationTitle("Profile")
     }

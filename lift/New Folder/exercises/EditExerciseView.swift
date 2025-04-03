@@ -1,16 +1,138 @@
 import SwiftUI
 
 struct EditExerciseView: View {
+//    @Environment(\.dismiss) var dismiss
+//    @EnvironmentObject var userViewModel: UserViewModel
+//    
+//    let exerciseName: String
+//    @State private var newName: String = ""
+//    @State private var selectedMuscleGroups: [String] = []
+//    @State private var selectedBarType: String = "Barbell"
+//    @State private var isLoading = false
+//    @State private var showDeleteAlert = false
+//    
+//    let muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body"]
+//    let barTypes = ["Barbell", "Dumbbell", "Machine", "Cable", "Bodyweight", "Other"]
+//    
     var body: some View {
         Text("")
+//        NavigationView {
+//            Form {
+//                Section(header: Text("Exercise Details")) {
+//                    TextField("Exercise Name", text: $newName)
+//                    
+//                    Picker("Bar Type", selection: $selectedBarType) {
+//                        ForEach(barTypes, id: \.self) { type in
+//                            Text(type)
+//                        }
+//                    }
+//                }
+//                
+//                Section(header: Text("Muscle Groups")) {
+//                    ForEach(muscleGroups, id: \.self) { group in
+//                        MultipleSelectionRow(title: group, isSelected: selectedMuscleGroups.contains(group)) {
+//                            if selectedMuscleGroups.contains(group) {
+//                                selectedMuscleGroups.removeAll { $0 == group }
+//                            } else {
+//                                selectedMuscleGroups.append(group)
+//                            }
+//                        }
+//                    }
+//                }
+//                
+//                Section {
+//                    Button("Save Changes") {
+//                        saveChanges()
+//                    }
+//                    .disabled(newName.isEmpty || isLoading)
+//                    
+//                    Button(role: .destructive) {
+//                        showDeleteAlert = true
+//                    } label: {
+//                        HStack {
+//                            Spacer()
+//                            Text("Delete Exercise")
+//                            Spacer()
+//                        }
+//                    }
+//                }
+//            }
+//            .navigationTitle("Edit Exercise")
+//            .navigationBarTitleDisplayMode(.inline)
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    Button("Done") {
+//                        dismiss()
+//                    }
+//                }
+//            }
+//            .alert("Delete Exercise", isPresented: $showDeleteAlert) {
+//                Button("Delete", role: .destructive) {
+//                    deleteExercise()
+//                }
+//                Button("Cancel", role: .cancel) {}
+//            } message: {
+//                Text("Are you sure you want to delete this exercise? All associated workout data will be permanently removed.")
+//            }
+//            .onAppear {
+//                loadExerciseData()
+//            }
+//        }
+//    }
+//    
+//    private func loadExerciseData() {
+//        if let exercise = userViewModel.userExercises.first(where: { $0.name == exerciseName }) {
+//            newName = exercise.name
+//            selectedBarType = exercise.barType
+//            selectedMuscleGroups = exercise.muscleGroups
+//        }
+//    }
+//    
+//    private func saveChanges() {
+//        isLoading = true
+////        userViewModel.updateExercise(
+////            oldName: exerciseName,
+////            newName: newName,
+////            muscleGroups: selectedMuscleGroups,
+////            barType: selectedBarType
+////        ) { success in
+////            isLoading = false
+////            if success {
+////                dismiss()
+////            }
+////        }
+//    }
+//    
+//    private func deleteExercise() {
+//        isLoading = true
+////        userViewModel.deleteExercise(name: exerciseName) { success in
+////            isLoading = false
+////            if success {
+////                dismiss()
+////            }
+////        }
+//    }
+//}
+//
+//struct MultipleSelectionRow: View {
+//    var title: String
+//    var isSelected: Bool
+//    var action: () -> Void
+//    
+//    var body: some View {
+//        Button(action: action) {
+//            HStack {
+//                Text(title)
+//                Spacer()
+//                if isSelected {
+//                    Image(systemName: "checkmark")
+//                        .foregroundColor(.blue)
+//                }
+//            }
+//            .contentShape(Rectangle())
+//        }
+//        .buttonStyle(PlainButtonStyle())
     }
-    
-    private func toggleMuscleGroup(_ muscle: String) {
-    }
-    
-    private func saveExercise() {
-    }
-    
 }
 
 

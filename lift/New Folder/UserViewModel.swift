@@ -40,12 +40,12 @@ class UserViewModel: ObservableObject {
     private var authStateListener: AuthStateDidChangeListenerHandle?
 
     deinit {
-        // Properly remove auth listener
+        // Remove auth listener
         if let listener = authStateListener {
             Auth.auth().removeStateDidChangeListener(listener)
         }
-        listener?.remove() // This is correct for Firestore listeners
-        statsListener?.remove() // This is correct for Firestore listeners
+        listener?.remove()
+        statsListener?.remove()
     }
     
     init() {
@@ -118,6 +118,96 @@ class UserViewModel: ObservableObject {
             }
         }
     }
+    
+//    func updateExercise(oldName: String, newName: String, muscleGroups: [String], barType: String, completion: @escaping (Bool) -> Void) {
+//        guard let userID = userID else {
+//            completion(false)
+//            return
+//        }
+//        
+//        let db = Firestore.firestore()
+//        let oldRef = db.collection("users").document(userID)
+//            .collection("exercises")
+//            .document(oldName.lowercased().replacingOccurrences(of: " ", with: "_"))
+//        
+//        // If name changed, we need to create a new document and delete the old one
+//        if oldName.lowercased() != newName.lowercased() {
+//            let newRef = db.collection("users").document(userID)
+//                .collection("exercises")
+//                .document(newName.lowercased().replacingOccurrences(of: " ", with: "_"))
+//            
+//            // Get all sets from old document
+//            oldRef.collection("sets").getDocuments { snapshot, error in
+//                if let error = error {
+//                    print("Error fetching sets: \(error.localizedDescription)")
+//                    completion(false)
+//                    return
+//                }
+//                
+//                let batch = db.batch()
+//                
+//                // Copy sets to new document
+//                if let documents = snapshot?.documents {
+//                    for document in documents {
+//                        let newSetRef = newRef.collection("sets").document(document.documentID)
+//                        batch.setData(document.data(), forDocument: newSetRef)
+//                    }
+//                }
+//                
+//                // Create new exercise document
+//                let exerciseData: [String: Any] = [
+//                    "name": newName,
+//                    "muscleGroups": muscleGroups,
+//                    "barType": barType,
+//                    "lastEdited": FieldValue.serverTimestamp()
+//                ]
+//                batch.setData(exerciseData, forDocument: newRef)
+//                
+//                // Delete old exercise document
+//                batch.deleteDocument(oldRef)
+//                
+//                batch.commit { error in
+//                    if let error = error {
+//                        print("Error updating exercise: \(error.localizedDescription)")
+//                        completion(false)
+//                    } else {
+//                        // Update local data
+//                        DispatchQueue.main.async {
+//                            if let index = self.userExercises.firstIndex(where: { $0.name == oldName }) {
+//                                self.userExercises[index].name = newName
+//                                self.userExercises[index].muscleGroups = muscleGroups
+//                                self.userExercises[index].barType = barType
+//                            }
+//                        }
+//                        completion(true)
+//                    }
+//                }
+//            }
+//        } else {
+//            // Just update the existing document
+//            let exerciseData: [String: Any] = [
+//                "muscleGroups": muscleGroups,
+//                "barType": barType,
+//                "lastEdited": FieldValue.serverTimestamp()
+//            ]
+//            
+//            oldRef.updateData(exerciseData) { error in
+//                if let error = error {
+//                    print("Error updating exercise: \(error.localizedDescription)")
+//                    completion(false)
+//                } else {
+//                    // Update local data
+//                    DispatchQueue.main.async {
+//                        if let index = self.userExercises.firstIndex(where: { $0.name == oldName }) {
+//                            self.userExercises[index].muscleGroups = muscleGroups
+//                            self.userExercises[index].barType = barType
+//                        }
+//                    }
+//                    completion(true)
+//                }
+//            }
+//        }
+//    }
 
     func saveWorkout(title: String, exercises: [Exercise], completion: @escaping (Error?) -> Void) {
         guard let userID = userID else {
@@ -642,18 +732,18 @@ class UserViewModel: ObservableObject {
     
     
     private func setupAuthListener() {
-            authStateListener = Auth.auth().addStateDidChangeListener { [weak self] (auth, user) in
-                guard let self = self else { return }
-                
-                if user != nil {
-                    // User signed in or already signed in
-                    self.initializeForCurrentUser()
-                } else {
-                    // User signed out
-                    self.resetUserData()
-                }
+        authStateListener = Auth.auth().addStateDidChangeListener { [weak self] (auth, user) in
+            guard let self = self else { return }
+            
+            if user != nil {
+                // User signed in or already signed in
+                self.initializeForCurrentUser()
+            } else {
+                // User signed out
+                self.resetUserData()
             }
         }
+    }
     
     private func initializeForCurrentUser() {
         resetUserData() // Clear any previous user's data first
