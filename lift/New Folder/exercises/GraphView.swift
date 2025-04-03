@@ -10,7 +10,7 @@ struct GraphView: View {
     @State private var showInfo = false
     @State private var showEditExerciseView = false
     
-    let exerciseName: String
+    let exerciseName: String // name passed through
     
     enum Metric: String, CaseIterable {
             case weight = "Weight"
@@ -207,7 +207,7 @@ struct GraphView: View {
                 .padding()
             }
             .sheet(isPresented: $showEditExerciseView) {
-                EditExerciseView()
+//                EditExerciseView(exerciseName: exerciseName)
             }
             .sheet(isPresented: $showInfo) {
                 GraphInfoView()

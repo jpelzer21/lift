@@ -1,281 +1,106 @@
+
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 struct EditExerciseView: View {
-//    @Environment(\.dismiss) var dismiss
-//    @EnvironmentObject var userViewModel: UserViewModel
-//    
-//    let exerciseName: String
-//    @State private var newName: String = ""
-//    @State private var selectedMuscleGroups: [String] = []
-//    @State private var selectedBarType: String = "Barbell"
-//    @State private var isLoading = false
-//    @State private var showDeleteAlert = false
-//    
-//    let muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body"]
-//    let barTypes = ["Barbell", "Dumbbell", "Machine", "Cable", "Bodyweight", "Other"]
-//    
+    @State private var exerciseName: String
+    @State private var barType: String = "barbell"
+    @State private var selectedMuscleGroups: [String] = []
+    
+    let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
+    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "BodyWeight", "Other"]
+    
+    @Environment(\.presentationMode) var presentationMode
+    
+    init(exerciseName: String, barType: String, selectedMuscleGroups: [String]) {
+        _exerciseName = State(initialValue: exerciseName)
+//        _barType = State(initialValue: barType)
+//        _selectedMuscleGroups = State(initialValue: selectedMuscleGroups)
+    }
+    
     var body: some View {
-        Text("")
-//        NavigationView {
-//            Form {
-//                Section(header: Text("Exercise Details")) {
-//                    TextField("Exercise Name", text: $newName)
-//                    
-//                    Picker("Bar Type", selection: $selectedBarType) {
-//                        ForEach(barTypes, id: \.self) { type in
-//                            Text(type)
-//                        }
-//                    }
-//                }
-//                
-//                Section(header: Text("Muscle Groups")) {
-//                    ForEach(muscleGroups, id: \.self) { group in
-//                        MultipleSelectionRow(title: group, isSelected: selectedMuscleGroups.contains(group)) {
-//                            if selectedMuscleGroups.contains(group) {
-//                                selectedMuscleGroups.removeAll { $0 == group }
-//                            } else {
-//                                selectedMuscleGroups.append(group)
-//                            }
-//                        }
-//                    }
-//                }
-//                
-//                Section {
-//                    Button("Save Changes") {
-//                        saveChanges()
-//                    }
-//                    .disabled(newName.isEmpty || isLoading)
-//                    
-//                    Button(role: .destructive) {
-//                        showDeleteAlert = true
-//                    } label: {
-//                        HStack {
-//                            Spacer()
-//                            Text("Delete Exercise")
-//                            Spacer()
-//                        }
-//                    }
-//                }
-//            }
-//            .navigationTitle("Edit Exercise")
-//            .navigationBarTitleDisplayMode(.inline)
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    Button("Done") {
-//                        dismiss()
-//                    }
-//                }
-//            }
-//            .alert("Delete Exercise", isPresented: $showDeleteAlert) {
-//                Button("Delete", role: .destructive) {
-//                    deleteExercise()
-//                }
-//                Button("Cancel", role: .cancel) {}
-//            } message: {
-//                Text("Are you sure you want to delete this exercise? All associated workout data will be permanently removed.")
-//            }
-//            .onAppear {
-//                loadExerciseData()
-//            }
-//        }
-//    }
-//    
-//    private func loadExerciseData() {
-//        if let exercise = userViewModel.userExercises.first(where: { $0.name == exerciseName }) {
-//            newName = exercise.name
-//            selectedBarType = exercise.barType
-//            selectedMuscleGroups = exercise.muscleGroups
-//        }
-//    }
-//    
-//    private func saveChanges() {
-//        isLoading = true
-////        userViewModel.updateExercise(
-////            oldName: exerciseName,
-////            newName: newName,
-////            muscleGroups: selectedMuscleGroups,
-////            barType: selectedBarType
-////        ) { success in
-////            isLoading = false
-////            if success {
-////                dismiss()
-////            }
-////        }
-//    }
-//    
-//    private func deleteExercise() {
-//        isLoading = true
-////        userViewModel.deleteExercise(name: exerciseName) { success in
-////            isLoading = false
-////            if success {
-////                dismiss()
-////            }
-////        }
-//    }
-//}
-//
-//struct MultipleSelectionRow: View {
-//    var title: String
-//    var isSelected: Bool
-//    var action: () -> Void
-//    
-//    var body: some View {
-//        Button(action: action) {
-//            HStack {
-//                Text(title)
-//                Spacer()
-//                if isSelected {
-//                    Image(systemName: "checkmark")
-//                        .foregroundColor(.blue)
-//                }
-//            }
-//            .contentShape(Rectangle())
-//        }
-//        .buttonStyle(PlainButtonStyle())
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    TextField("Exercise Name", text: $exerciseName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    
+                    VStack(alignment: .leading) {
+                        Text("Select Bar Type:")
+                            .font(.headline)
+                        
+                        Picker("Bar Type", selection: $barType) {
+                            ForEach(barTypeOptions, id: \.self) { type in
+                                Text(type)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                    }
+                    .padding(.horizontal)
+                    
+                    Text("Select Muscle Groups:")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(muscleGroups, id: \.self) { muscle in
+                            Button(action: {
+                                toggleMuscleGroup(muscle)
+                            }) {
+                                HStack {
+                                    Image(systemName: selectedMuscleGroups.contains(muscle) ? "checkmark.square.fill" : "square")
+                                        .foregroundColor(.pink)
+                                    Text(muscle)
+                                        .foregroundColor(.primary)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    Button(action: saveExercise) {
+                        Text("Save Changes")
+                            .bold()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(exerciseName.isEmpty ? Color.gray.opacity(0.5) : Color.pink)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(exerciseName.isEmpty)
+                    .padding()
+                    
+                    Spacer()
+                }
+                .padding(.bottom, 50)
+            }
+            .navigationTitle("Edit Exercise")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func toggleMuscleGroup(_ muscle: String) {
+        if selectedMuscleGroups.contains(muscle) {
+            selectedMuscleGroups.removeAll { $0 == muscle }
+        } else {
+            selectedMuscleGroups.append(muscle)
+        }
+    }
+    
+    private func saveExercise() {
+        // Functionality to save the edited exercise will be implemented later
     }
 }
-
-
-
-
-
-//import SwiftUI
-//import FirebaseFirestore
-//import FirebaseAuth
-//
-//struct EditExerciseView: View {
-//    @Environment(\.presentationMode) var presentationMode
-//    @State private var exerciseName: String
-//    @State private var selectedMuscleGroups: [String] = []
-//    @State private var barType: String
-//    @State private var isLoading = false
-//    @State private var errorMessage: String?
-    
-//    let exerciseID: String
-//    let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-//    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "Other"]
-//    
-//    init(exerciseID: String, existingExerciseName: String, existingMuscleGroups: [String], existingBarType: String) {
-//        self.exerciseID = exerciseID
-//        _exerciseName = State(initialValue: existingExerciseName)
-//        _selectedMuscleGroups = State(initialValue: existingMuscleGroups)
-//        _barType = State(initialValue: existingBarType)
-//    }
-//    
-//    var body: some View {
-//        Text("hi")
-//        NavigationView {
-//            ScrollView {
-//                VStack(alignment: .leading, spacing: 20) {
-//                    VStack(alignment: .leading) {
-//                        Text("Select Bar Type:")
-//                            .font(.headline)
-//                        
-//                        Picker("Bar Type", selection: $barType) {
-//                            ForEach(barTypeOptions, id: \.self) { type in
-//                                Text(type)
-//                            }
-//                        }
-//                        .pickerStyle(MenuPickerStyle())
-//                    }
-//                    .padding(.horizontal)
-//                    
-//                    Text("Select Muscle Groups:")
-//                        .font(.headline)
-//                        .padding(.horizontal)
-//                    
-//                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-//                        ForEach(muscleGroups, id: \.self) { muscle in
-//                            Button(action: {
-//                                toggleMuscleGroup(muscle)
-//                            }) {
-//                                HStack {
-//                                    Image(systemName: selectedMuscleGroups.contains(muscle) ? "checkmark.square.fill" : "square")
-//                                        .foregroundColor(.pink)
-//                                    Text(muscle)
-//                                        .foregroundColor(.primary)
-//                                }
-//                                .padding()
-//                                .frame(maxWidth: .infinity)
-//                                .background(Color.gray.opacity(0.1))
-//                                .cornerRadius(8)
-//                            }
-//                        }
-//                    }
-//                    .padding(.horizontal)
-//                    
-//                    if let error = errorMessage {
-//                        Text(error)
-//                            .foregroundColor(.red)
-//                            .font(.caption)
-//                            .padding()
-//                    }
-//
-//                    Button(action: updateExercise) {
-//                        Text(isLoading ? "Saving..." : "Update Exercise")
-//                            .bold()
-//                            .frame(maxWidth: .infinity)
-//                            .padding()
-//                            .background(exerciseName.isEmpty ? Color.gray.opacity(0.5) : Color.pink)
-//                            .foregroundColor(.white)
-//                            .cornerRadius(10)
-//                    }
-//                    .disabled(exerciseName.isEmpty || selectedMuscleGroups.isEmpty)
-//                    .padding()
-//
-//                    Spacer()
-//                }
-//                .padding(.bottom, 50)
-//            }
-//            .navigationTitle("Edit \(exerciseName)")
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Cancel") {
-//                        presentationMode.wrappedValue.dismiss()
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    
-//    // Toggle muscle group selection
-//    private func toggleMuscleGroup(_ muscle: String) {
-//        if selectedMuscleGroups.contains(muscle) {
-//            selectedMuscleGroups.removeAll { $0 == muscle }
-//        } else {
-//            selectedMuscleGroups.append(muscle)
-//        }
-//    }
-//
-//    // Update exercise in Firestore
-//    private func updateExercise() {
-//        isLoading = true
-//        errorMessage = nil
-//        guard let userID = Auth.auth().currentUser?.uid else {
-//            errorMessage = "User not authenticated."
-//            isLoading = false
-//            return
-//        }
-//        
-//        let db = Firestore.firestore()
-//        let exerciseRef = db.collection("users").document(userID).collection("exercises").document(exerciseID)
-//        
-//        let updatedExercise = [
-//            "name": exerciseName.capitalized,
-//            "muscleGroups": selectedMuscleGroups,
-//            "barType": barType,
-//            "updatedAt": Timestamp(date: Date())
-//        ] as [String : Any]
-//        
-//        exerciseRef.updateData(updatedExercise) { error in
-//            isLoading = false
-//            if let error = error {
-//                print("🔥 Firestore Error: \(error.localizedDescription)")
-//                errorMessage = "Error: \(error.localizedDescription)"
-//            } else {
-//                print("✅ Exercise updated successfully!")
-//                presentationMode.wrappedValue.dismiss()
-//            }
-//        }
-//    }
-//}

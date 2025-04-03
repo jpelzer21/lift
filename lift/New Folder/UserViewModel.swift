@@ -107,7 +107,7 @@ class UserViewModel: ObservableObject {
         
         // Update PR count if needed
         if prCountIncrement > 0 {
-            let statsRef = db.collection("userStats").document(userID)
+            let statsRef = db.collection("users").document(userID).collection("userStats").document()
             batch.updateData([
                 "prCount": FieldValue.increment(Int64(prCountIncrement))
             ], forDocument: statsRef)
@@ -257,7 +257,7 @@ class UserViewModel: ObservableObject {
         batch.setData(workoutData, forDocument: workoutRef)
         
         // Update stats
-        let statsRef = db.collection("userStats").document(userID)
+        let statsRef = db.collection("users").document(userID).collection("userStats").document()
         var statsData: [String: Any] = [
             "workoutCount": FieldValue.increment(Int64(1)),
             "lastWorkoutDate": Timestamp(date: Date())
@@ -453,7 +453,7 @@ class UserViewModel: ObservableObject {
     private func setupStatsListener() {
         guard let userID = userID else { return }
         
-        statsListener = db.collection("userStats").document(userID)
+        statsListener = db.collection("users").document(userID).collection("userStats").document()
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -661,7 +661,7 @@ class UserViewModel: ObservableObject {
     private func incrementStreak() {
         guard let userID = userID else { return }
         
-        let statsRef = db.collection("userStats").document(userID)
+        let statsRef = db.collection("users").document(userID).collection("userStats").document()
         statsRef.setData([
             "dayStreak": FieldValue.increment(Int64(1))
         ], merge: true)
@@ -670,7 +670,7 @@ class UserViewModel: ObservableObject {
     private func resetStreak() {
         guard let userID = userID else { return }
         
-        let statsRef = db.collection("userStats").document(userID)
+        let statsRef = db.collection("users").document(userID).collection("userStats").document()
         statsRef.setData([
             "dayStreak": 0
         ], merge: true)
@@ -706,7 +706,7 @@ class UserViewModel: ObservableObject {
     func incrementWorkoutCount() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
-        let statsRef = db.collection("userStats").document(userID)
+        let statsRef = db.collection("users").document(userID).collection("userStats").document()
         statsRef.setData([
             "workoutCount": FieldValue.increment(Int64(1)),
             "lastWorkoutDate": Timestamp(date: Date())

@@ -8,7 +8,7 @@ struct AddFoodView: View {
     @State private var searchText = ""
     @State private var isSearching: Bool = false
     @State private var searchResults: [FoodItem] = []
-    @State private var selectedFood: FoodItem?
+    @State private var selectedFood: FoodItem = FoodItem(servingSize: "", name: "", calories: 0, protein: 0, fats: 0, carbs: 0, sugars: 0, imageUrl: "")
     @State private var servings: Int = 1
     @State private var isScannerPresented = false
     @State private var isPopupPresented: Bool = false
@@ -52,7 +52,7 @@ struct AddFoodView: View {
                         }
                         .padding(.horizontal)
                         
-                        Text("Using Open Food Facts Database")
+                        Text("Using USDA Database")
                             .font(.caption)
                             .foregroundColor(.gray)
                         
@@ -88,9 +88,10 @@ struct AddFoodView: View {
                                         FoodRowView(food: food)
                                             .onTapGesture {
                                                 self.selectedFood = food
+                                                print(selectedFood.name as Any)
                                                 self.isPopupPresented = true
-                                                print("item pressed")
                                             }
+                                        
                                     }
                                 }
                             }
@@ -131,31 +132,32 @@ struct AddFoodView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .padding(.horizontal)
+                        Text("Using Open Food Facts Database")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
                 
                 Spacer()
             }
-            .navigationTitle("Food Search")
+            .navigationTitle("Add Food")
             .sheet(isPresented: $isShowingCreateFood) {
                 CreateFoodView(viewModel: viewModel)
             }
             .sheet(isPresented: $isScannerPresented) {
-                BarcodeScannerView(isPresented: $isScannerPresented) { scannedValue in
+                BarcodeScannerSheetView(isPresented: $isScannerPresented) { scannedValue in
                     fetchNutritionData(for: scannedValue)
                 }
             }
             .sheet(isPresented: $isPopupPresented) {
-                if let food = selectedFood {
-                    FoodDetailPopup(
-                        updatefood: false,
-                        foodItem: .constant(food), // This binds the food to the popup
-                        isPresented: $isPopupPresented,
-                        onAddFood: { updatedFood in
-                            addToDailyTotal(updatedFood)
-                        }
-                    )
-                }
+                FoodDetailPopup(
+                    updatefood: false,
+                    foodItem: $selectedFood,
+                    isPresented: $isPopupPresented,
+                    onAddFood: { updatedFood in
+                        addToDailyTotal(updatedFood)
+                    }
+                )
             }
         }
     }
@@ -302,6 +304,7 @@ struct AddFoodView: View {
         }.resume()
     }
 }
+
 struct FoodRowView: View {
    let food: FoodItem
    
@@ -336,7 +339,9 @@ struct FoodRowView: View {
            
            Spacer()
        }
-       .padding(.vertical, 8)
+       .frame(maxWidth: .infinity, alignment: .leading)
+       .padding(.horizontal, 20)
+       .padding(.vertical, 10)
        .contentShape(Rectangle())
        
    }
@@ -431,6 +436,24 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
     }
 }
 
+struct BarcodeScannerSheetView: View {
+    @Binding var isPresented: Bool
+    var onScan: (String) -> Void
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.8) // Dark background for contrast
+            
+            BarcodeScannerView(isPresented: $isPresented, onScan: onScan)
+                .frame(height: UIScreen.main.bounds.height * 0.4) // Scanner takes up 40% of the screen
+                .cornerRadius(20)
+                .padding(.horizontal)
+        }
+        .presentationDetents([.medium]) // Makes it appear as a half-screen sheet
+        .presentationDragIndicator(.visible) // Small drag indicator at the top
+    }
+}
+
 struct FoodSearchResponse: Codable {
     let foods: [USDAFood]
 }
@@ -451,4 +474,6 @@ struct USDANutrient: Codable {
     let nutrientName: String
     let value: Double?
 }
+
+
 

@@ -134,6 +134,7 @@ struct FoodDetailPopup: View {
                     }
                     
                 }
+            
             }
             .padding()
             .frame(width: UIScreen.main.bounds.width * 0.85, height: UIScreen.main.bounds.height * 0.75)
@@ -143,6 +144,7 @@ struct FoodDetailPopup: View {
         }
         .transition(.move(edge: .bottom))
 //        .animation(.spring(), value: isPresented)
+//        .frame(width: UIScreen.main.bounds.width * 0.85, height: UIScreen.main.bounds.height * 0.75)
     }
     
     

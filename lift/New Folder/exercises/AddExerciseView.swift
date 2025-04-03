@@ -87,7 +87,7 @@ struct AddExerciseView: View {
 
                     Spacer()
                 }
-                .padding(.bottom, 50) // 🔥 Extra padding at the bottom to prevent cutoff
+                .padding(.bottom, 50) // Extra padding at the bottom to prevent cutoff
             }
             .navigationTitle("Create New Exercise")
             .toolbar {
