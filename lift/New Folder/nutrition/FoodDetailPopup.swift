@@ -9,8 +9,7 @@ struct FoodDetailPopup: View {
     
     var body: some View {
         ZStack {
-            Color.black.opacity(0.3)
-                .edgesIgnoringSafeArea(.all)
+            Color.clear
             VStack(spacing: 20) {
                 if let imageUrl = foodItem.imageUrl, let url = URL(string: imageUrl) {
                     AsyncImage(url: url) { phase in

@@ -7,18 +7,22 @@
 
 
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
+
 
 struct CreateFoodView: View {
     @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var viewModel: UserViewModel
     
+    @State private var errorMessage: String = ""
     @State private var name: String = ""
     @State private var calories: String = ""
     @State private var protein: String = ""
     @State private var fats: String = ""
     @State private var carbs: String = ""
     @State private var sugars: String = ""
-    
-//    var onFoodAdded: (FoodItem) -> Void
+    @State private var servingSize: String = "Custom"
     
     var body: some View {
         NavigationView {
@@ -35,6 +39,14 @@ struct CreateFoodView: View {
                         .keyboardType(.decimalPad)
                     TextField("Sugars (g)", text: $sugars)
                         .keyboardType(.decimalPad)
+                    
+
+                }
+                Section(header: Text("Extra Details")) {
+                    TextField("Serving Size", text: $servingSize)
+                    Button("Add Image") {
+                    }
+                    
                 }
                 
                 Button(action: saveFood) {
@@ -43,10 +55,14 @@ struct CreateFoodView: View {
                         Text("Save Food")
                     }
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(name.isEmpty)
+                
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
                 }
             }
             .navigationTitle("Create Food")
@@ -57,10 +73,13 @@ struct CreateFoodView: View {
     }
     
     private func saveFood() {
-        guard !name.isEmpty else { return }
+        guard !name.isEmpty else {
+            errorMessage = "Food name must not be empty."
+            return
+        }
         
         let newFood = FoodItem(
-            servingSize: "Custom",
+            servingSize: servingSize,
             name: name,
             calories: Double(calories) ?? 0,
             protein: Double(protein) ?? 0,
@@ -70,7 +89,13 @@ struct CreateFoodView: View {
             imageUrl: nil
         )
         
-//        onFoodAdded(newFood)
-        presentationMode.wrappedValue.dismiss()
+        viewModel.saveCustomFood(newFood) { result in
+            switch result {
+            case .success:
+                presentationMode.wrappedValue.dismiss()
+            case .failure(let error):
+                errorMessage = "Error saving food: \(error.localizedDescription)"
+            }
+        }
     }
 }

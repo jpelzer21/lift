@@ -8,7 +8,6 @@ class UserViewModel: ObservableObject {
     @Published var templates: [WorkoutTemplate] = []
     @Published var isLoading = false
     
-    
     // Basic Info
     @Published var userName: String = "Loading..."
     @Published var userEmail: String = "Loading..."
@@ -29,6 +28,8 @@ class UserViewModel: ObservableObject {
     @Published var profileCompletion: Double = 0
     
     @Published var userExercises: [Exercise] = []
+    @Published var customFoods: [FoodItem] = []
+    
     
     static let shared = UserViewModel()
     private var db = Firestore.firestore()
@@ -119,6 +120,8 @@ class UserViewModel: ObservableObject {
         }
     }
     
+    
+    // TODO: Create EditExerciseView() for this function
 //    func updateExercise(oldName: String, newName: String, muscleGroups: [String], barType: String, completion: @escaping (Bool) -> Void) {
 //        guard let userID = userID else {
 //            completion(false)
@@ -752,6 +755,7 @@ class UserViewModel: ObservableObject {
         fetchTemplatesRealtime()
         setupStatsListener()
         fetchExercises()
+        startListeningForCustomFoods()
     }
     
     // MARK: - Reset
@@ -780,4 +784,74 @@ class UserViewModel: ObservableObject {
                 self.lastWorkoutDate = nil
             }
         }
+}
+
+// MARK: - Food Management
+extension UserViewModel {
+    func saveCustomFood(_ food: FoodItem, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let userID = userID else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
+            return
+        }
+        
+        do {
+            try db.collection("users").document(userID)
+                .collection("customFoods").document(food.id.uuidString)
+                .setData(from: food) { error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else {
+                        completion(.success(()))
+                    }
+                }
+        } catch {
+            completion(.failure(error))
+        }
+    }
+    
+    /// 🔥 Firestore Listener for Real-time Custom Food Updates
+    func startListeningForCustomFoods() {
+        guard let userID = userID else { return }
+        
+        db.collection("users").document(userID)
+            .collection("customFoods")
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error fetching custom foods: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    self.customFoods = []
+                    return
+                }
+                
+                self.customFoods = documents.compactMap { doc -> FoodItem? in
+                    try? doc.data(as: FoodItem.self)
+                }
+            }
+    }
+    
+    /// Manually fetches once (if needed)
+    func fetchCustomFoods(completion: @escaping (Result<[FoodItem], Error>) -> Void) {
+        guard let userID = userID else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
+            return
+        }
+        
+        db.collection("users").document(userID)
+            .collection("customFoods")
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                let foods = snapshot?.documents.compactMap { document -> FoodItem? in
+                    try? document.data(as: FoodItem.self)
+                } ?? []
+                
+                completion(.success(foods))
+            }
+    }
 }

@@ -3,6 +3,8 @@ import AVFoundation
 struct AddFoodView: View {
     @Environment(\.presentationMode) var presentationMode
     
+    @StateObject private var viewModel = UserViewModel.shared
+    
     @State private var searchText = ""
     @State private var isSearching: Bool = false
     @State private var searchResults: [FoodItem] = []
@@ -14,110 +16,148 @@ struct AddFoodView: View {
     
     @State private var scanErrorMessage: String? // Store error messages
     @State private var isShowingScanError = false // Track error alert visibility
+    @State private var isShowingCreateFood: Bool = false
+    @State private var selectedTab = 1  // 0: Search, 1: Custom, 2: Barcode
     
     @State private var mutableFoodItem: FoodItem?
     
     var onFoodAdded: (FoodItem) -> Void
     
     var body: some View {
-        ZStack {
+        NavigationView {
             VStack {
-                HStack {
-                    TextField("Search for food...", text: $searchText, onCommit: {
-                        // search for food
-                        searchFood()
-                    })
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.leading)
-                    Button {
-                        // search for food
-                    }label: {
-                        Image(systemName: "magnifyingglass")
-                            .padding()
-                            .background(Color.pink)
-                            .foregroundColor(.white)
-                            .clipShape(Circle())
-                    }
+                // Segmented Picker for switching between tabs
+                Picker(selection: $selectedTab, label: Text("Select Mode")) {
+                    Text("Search").tag(0)
+                    Text("My Foods").tag(1)
+                    Text("Scan").tag(2)
                 }
-                .padding(.top, 20)
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal)
                 
-                Text("Using Open Food Facts Database")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                
-                if isSearching {
-                    ProgressView()
-                } else {
-                    ScrollView {
-                        LazyVStack {
-                            ForEach(searchResults) { result in
-                                FoodRowView(food: result)
-                                    .contentShape(Rectangle()) // Ensure it's tappable
-                                    .onTapGesture {
-                                        print("Tapped \(result.name)")
-                                        self.selectedFood = result
-                                        self.isPopupPresented = true
+                // Search Food
+                if selectedTab == 0 {
+                    VStack {
+                        HStack {
+                            TextField("Search for food...", text: $searchText, onCommit: searchFood)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            
+                            Button(action: searchFood) {
+                                Image(systemName: "magnifyingglass")
+                                    .padding()
+                                    .background(Color.pink)
+                                    .foregroundColor(.white)
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .padding(.horizontal)
+                        
+                        Text("Using Open Food Facts Database")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        if isSearching {
+                            ProgressView()
+                        } else {
+                            ScrollView {
+                                LazyVStack {
+                                    ForEach(searchResults) { food in
+                                        FoodRowView(food: food)
+                                            .onTapGesture {
+                                                self.selectedFood = food
+                                                self.isPopupPresented = true
+                                            }
                                     }
+                                }
                             }
                         }
                     }
+                    .padding(20)
                 }
-                           
-                Spacer()
-                Button(action: { isScannerPresented = true }) {
-                    HStack {
-                        Image(systemName: "barcode.viewfinder")
-                        Text("Scan Barcode")
+                
+                // Custom Foods
+                else if selectedTab == 1 {
+                    VStack {
+                        if viewModel.customFoods.isEmpty {
+                            Text("No custom foods found.")
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack {
+                                    ForEach(viewModel.customFoods) { food in
+                                        FoodRowView(food: food)
+                                            .onTapGesture {
+                                                self.selectedFood = food
+                                                self.isPopupPresented = true
+                                                print("item pressed")
+                                            }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Button(action: { isShowingCreateFood = true }) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                Text("Create Custom Food")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .padding(.horizontal)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.pink)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(20)
                 }
-                .padding(.horizontal, 20)
                 
+                // Barcode Scanner
+                else if selectedTab == 2 {
+                    VStack {
+                        Text("Scan a barcode to find food information.")
+                            .foregroundColor(.gray)
+                            .padding()
+                        
+                        Button(action: { isScannerPresented = true }) {
+                            HStack {
+                                Image(systemName: "barcode.viewfinder")
+                                Text("Scan Barcode")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.pink)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .padding(.horizontal)
+                    }
+                }
                 
-                
-
+                Spacer()
             }
-            .padding(20)
+            .navigationTitle("Food Search")
+            .sheet(isPresented: $isShowingCreateFood) {
+                CreateFoodView(viewModel: viewModel)
+            }
             .sheet(isPresented: $isScannerPresented) {
                 BarcodeScannerView(isPresented: $isScannerPresented) { scannedValue in
                     fetchNutritionData(for: scannedValue)
                 }
             }
-            .alert("Scan Failed", isPresented: $isShowingScanError, presenting: scanErrorMessage) { _ in
-                Button("OK", role: .cancel) {}
-            } message: { error in
-                Text(error)
-            }
-            .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-            if isPopupPresented, let food = selectedFood {
-                // Create a binding to the mutableFoodItem
-                FoodDetailPopup(
-                    updatefood: false,
-                    foodItem: Binding<FoodItem>(
-                        get: { self.mutableFoodItem ?? food },
-                        set: { self.mutableFoodItem = $0 }
-                    ),
-                    isPresented: $isPopupPresented,
-                    onAddFood: { updatedFood in
-                        // Use the servings from the mutableFoodItem if it exists
-//                        let servings = self.mutableFoodItem?.servings ?? 1
-                        self.addToDailyTotal(updatedFood)
-                    }
-                )
-                .onAppear {
-                    // Initialize the mutable copy when the popup appears
-                    self.mutableFoodItem = food
+            .sheet(isPresented: $isPopupPresented) {
+                if let food = selectedFood {
+                    FoodDetailPopup(
+                        updatefood: false,
+                        foodItem: .constant(food), // This binds the food to the popup
+                        isPresented: $isPopupPresented,
+                        onAddFood: { updatedFood in
+                            addToDailyTotal(updatedFood)
+                        }
+                    )
                 }
             }
         }
-        
     }
     
     func addToDailyTotal(_ food: FoodItem) {
