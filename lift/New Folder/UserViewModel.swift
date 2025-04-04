@@ -12,10 +12,18 @@ class UserViewModel: ObservableObject {
     @Published var userName: String = "Loading..."
     @Published var userEmail: String = "Loading..."
     @Published var weight: String = "Loading..."
+    @Published var height: String = "Loading..."
     @Published var dob: Date?
     @Published var gender: String = "Loading..."
     @Published var activityLevel: String = "Loading..."
     @Published var goal: String = "Loading..."
+    
+    // Calulated Nutrition Info
+    @Published var goalCalories: Int = 0
+    @Published var goalCarbs: Int = 0
+    @Published var goalProtein: Int = 0
+    @Published var goalFat: Int = 0
+    @Published var goalSugars: Int = 0
     
     // New Stats Fields
     @Published var workoutCount: Int = 0
@@ -232,6 +240,7 @@ class UserViewModel: ObservableObject {
                     "weight": maxRepSet.weight
                 ]
                 exerciseDetails.append(exerciseData)
+                incrementWorkoutCount()
                 
                 // Check if this is a PR (personal record)
                 if isPersonalRecord(exercise: exercise, set: maxRepSet) {
@@ -603,6 +612,7 @@ class UserViewModel: ObservableObject {
         self.userName = data["name"] as? String ?? "No Name"
         self.userEmail = data["email"] as? String ?? "No Email"
         self.weight = data["weight"] as? String ?? "0"
+        self.height = data["height"] as? String ?? "0"
         self.gender = data["gender"] as? String ?? "Not Set"
         self.activityLevel = data["activityLevel"] as? String ?? "Not Set"
         self.goal = data["goal"] as? String ?? "Not Set"
@@ -638,6 +648,61 @@ class UserViewModel: ObservableObject {
         if let lastWorkoutDate = newLastWorkoutDate {
             self.calculateStreak(lastWorkoutDate: lastWorkoutDate)
         }
+    }
+    
+    func calculateCaloricIntake() {
+        guard let dob = dob,
+              let age = calculateAge(from: dob) else {
+            return
+        }
+
+        let weightKg = (Double(weight) ?? 160)*0.45359237
+        let heightCm: Double = (Double(height) ?? 70)/0.3937
+        let bmr: Double // basil metabolic rate
+
+        if gender.lowercased() == "male" {
+//            BMR = 66 + (13.7 × weight in kg) + (5 × height in cm) - (6.8 × age in years)
+            bmr = 66 + (13.7 * weightKg) + (5 * heightCm) - (6.8 * Double(age))
+        } else {
+//            BMR = 655 + (9.6 × body weight in kg) + (1.8 × body height in cm) - (4.7 × age in years)
+            bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
+//            bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+        }
+
+        let activityMultiplier: Double = {
+            switch activityLevel.lowercased() {
+                case "sedentary": return 1
+                case "light exercise": return 1.1
+                case "moderate exercise": return 1.2
+                case "heavy exercise": return 1.3
+                case "athlete": return 1.5
+                default: return 1
+            }
+        }()
+
+        var tdee = bmr * activityMultiplier
+
+        switch goal.lowercased() {
+            case "lose weight": tdee -= 300
+            case "maintain weight": break
+            case "gain muscle": tdee += 300
+            default: break
+        }
+
+        // Update goal variables
+        goalCalories = Int(tdee)
+        goalProtein = Int((Double(weight) ?? 160)*1)
+        goalCarbs = Int((tdee * 0.50) / 4)
+        goalFat = Int((tdee * 0.50) / 9)
+        goalSugars = Int((tdee * 0.10) / 4)  // 10% of carbs allocated to sugar
+        
+        
+    }
+    
+    private func calculateAge(from birthDate: Date) -> Int? {
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: Date())
+        return ageComponents.year
     }
 
     private func calculateStreak(lastWorkoutDate: Date) {
@@ -678,7 +743,7 @@ class UserViewModel: ObservableObject {
     
     // MARK: - Update Methods
     func updateUserProfile(name: String, email: String, dob: Date, gender: String,
-                         weight: String, activityLevel: String, goal: String) {
+                           weight: String, height: String, activityLevel: String, goal: String) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
         let userData: [String: Any] = [
@@ -687,6 +752,7 @@ class UserViewModel: ObservableObject {
             "dob": Timestamp(date: dob),
             "gender": gender,
             "weight": weight,
+            "height": height,
             "activityLevel": activityLevel,
             "goal": goal
         ]

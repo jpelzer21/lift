@@ -22,7 +22,7 @@ struct CreateFoodView: View {
     @State private var fats: String = ""
     @State private var carbs: String = ""
     @State private var sugars: String = ""
-    @State private var servingSize: String = "Custom"
+    @State private var servingSize: String = ""
     
     var body: some View {
         NavigationView {

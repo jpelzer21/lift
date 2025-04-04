@@ -11,15 +11,17 @@ struct EditProfileView: View {
     @State private var dob: Date
     @State private var gender: String
     @State private var weight: Int
+    @State private var height: Int
     @State private var activityLevel: String
     @State private var goal: String
 
     let genderOptions = ["Not Set", "Male", "Female", "Other"]
-    let activityOptions = ["Not Set", "Sedentary", "Lightly Active", "Moderately Active", "Very Active"]
+    let activityOptions = ["Not Set", "Sedentary", "light exercise", "moderate exercise", "heavy exercise", "athlete"]
     let goalOptions = ["Not Set", "Lose Weight", "Maintain Weight", "Gain Muscle"]
     
     let ageOptions = Array(5...100)
     let weightOptions = Array(stride(from: 50, to: 400, by: 5))
+    let heightOptions = Array(48...90)
 
     init(userViewModel: UserViewModel) {
         self.userViewModel = userViewModel
@@ -30,14 +32,15 @@ struct EditProfileView: View {
         _weight = State(initialValue: Int(userViewModel.weight) ?? 150)
         _activityLevel = State(initialValue: activityOptions.contains(userViewModel.activityLevel) ? userViewModel.activityLevel : "Not Set")
         _goal = State(initialValue: goalOptions.contains(userViewModel.goal) ? userViewModel.goal : "Not Set")
+        _height = State(initialValue: Int(userViewModel.height) ?? 65)
     }
     
     private var age: Int {
-            let calendar = Calendar.current
-            let now = Date()
-            let ageComponents = calendar.dateComponents([.year], from: dob, to: now)
-            return ageComponents.year ?? 0
-        }
+        let calendar = Calendar.current
+        let now = Date()
+        let ageComponents = calendar.dateComponents([.year], from: dob, to: now)
+        return ageComponents.year ?? 0
+    }
 
     var body: some View {
         NavigationView {
@@ -84,23 +87,41 @@ struct EditProfileView: View {
                             }
                             .pickerStyle(MenuPickerStyle())
                         }
-
-                        Picker("Gender", selection: $gender) {
-                            ForEach(genderOptions, id: \.self) { option in
-                                Text(option)
+                        
+                        HStack {
+                            Picker("Height", selection: $height) {
+                                ForEach(heightOptions, id: \.self) { height in
+                                    Text("\(height) in")
+                                }
                             }
+                            .pickerStyle(MenuPickerStyle())
                         }
 
-                        Picker("Activity Level", selection: $activityLevel) {
-                            ForEach(activityOptions, id: \.self) { option in
-                                Text(option)
+                        HStack {
+                            Picker("Gender", selection: $gender) {
+                                ForEach(genderOptions, id: \.self) { option in
+                                    Text(option)
+                                }
                             }
+                            .pickerStyle(MenuPickerStyle())
                         }
 
-                        Picker("Goal", selection: $goal) {
-                            ForEach(goalOptions, id: \.self) { option in
-                                Text(option)
+                        HStack {
+                            Picker("Activity Level", selection: $activityLevel) {
+                                ForEach(activityOptions, id: \.self) { option in
+                                    Text(option)
+                                }
                             }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+
+                        HStack {
+                            Picker("Goal", selection: $goal) {
+                                ForEach(goalOptions, id: \.self) { option in
+                                    Text(option)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
                         }
                     }
                 }
@@ -111,12 +132,13 @@ struct EditProfileView: View {
                     presentationMode.wrappedValue.dismiss()
                 }) {
                     Text("Save Changes")
+                        .contentShape(Rectangle())
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(10)
-                        .padding() // Add padding for spacing
+                        .padding()
                 }
             }
             .navigationTitle("Edit Profile")
@@ -133,6 +155,7 @@ struct EditProfileView: View {
             dob: dob,
             gender: gender,
             weight: String(weight),
+            height: String(height),
             activityLevel: activityLevel,
             goal: goal
         )

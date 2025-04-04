@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct NutritionView: View {
+    @EnvironmentObject private var userViewModel: UserViewModel
+    
     @State private var foodsEaten: [FoodItem] = UserDefaultsManager.loadFoods()
     @State private var showAddFoodView: Bool = false
     @State private var isPopupPresented: Bool = false
@@ -13,8 +15,8 @@ struct NutritionView: View {
     @State private var calorieGoal: Double = 2000
     @State private var proteinGoal: Double = 200
     @State private var fatsGoal: Double = 50
-    @State private var sugarsGoal: Double = 36
-    @State private var carbsGoal: Double = 200
+    @State private var sugarsGoal: Double = 20
+    @State private var carbsGoal: Double = 50
     
     // Daily Intake Values
     @State private var dailyCalories: Double = 0
@@ -27,17 +29,43 @@ struct NutritionView: View {
         ZStack {
             VStack {
                 TabView(selection: $selectedTabIndex) {
-                    Page3(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal)
+                    Page3(dailyCalories: $dailyCalories,
+                          dailyProtein: $dailyProtein,
+                          dailyCarbs: $dailyCarbs,
+                          dailyFats: $dailyFats,
+                          calorieGoal: $calorieGoal,
+                          proteinGoal: $proteinGoal,
+                          fatsGoal: $fatsGoal,
+                          carbsGoal: $carbsGoal)
                         .tag(0)
                     
-                    Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: false)
+                    Page1(dailyCalories: $dailyCalories,
+                          dailyProtein: $dailyProtein,
+                          dailyCarbs: $dailyCarbs,
+                          dailyFats: $dailyFats,
+                          dailySugars: $dailySugars,
+                          calorieGoal: $calorieGoal,
+                          proteinGoal: $proteinGoal,
+                          fatsGoal: $fatsGoal,
+                          carbsGoal: $carbsGoal,
+                          sugarsGoal: $sugarsGoal,
+                          showingTop: false)
                         .tag(1)
                     
-                    Page1(dailyCalories: $dailyCalories, dailyProtein: $dailyProtein, dailyCarbs: $dailyCarbs, dailyFats: $dailyFats, dailySugars: $dailySugars, calorieGoal: calorieGoal, proteinGoal: proteinGoal, fatsGoal: fatsGoal, carbsGoal: carbsGoal, sugarsGoal: sugarsGoal, showingTop: true)
+                    Page1(dailyCalories: $dailyCalories,
+                          dailyProtein: $dailyProtein,
+                          dailyCarbs: $dailyCarbs,
+                          dailyFats: $dailyFats,
+                          dailySugars: $dailySugars,
+                          calorieGoal: $calorieGoal,
+                          proteinGoal: $proteinGoal,
+                          fatsGoal: $fatsGoal,
+                          carbsGoal: $carbsGoal,
+                          sugarsGoal: $sugarsGoal,
+                          showingTop: true)
                         .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 300)
                 .onChange(of: selectedTabIndex, { oldValue, newValue in
                     UserDefaultsManager.saveSelectedTabIndex(newValue)
                 })
@@ -59,7 +87,7 @@ struct NutritionView: View {
                                 Text("\(food.servings) x ")
                                 Text(food.name)
                                 Spacer()
-                                Text("\(String(format: "%.1f", (food.calories ?? 0.0) * Double(food.servings))) cal")
+                                Text("\(String(format: "%.0f", (food.calories ?? 0.0) * Double(food.servings))) cal")
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -79,9 +107,16 @@ struct NutritionView: View {
                 AddFoodView(onFoodAdded: addFoodToDailyTotal)
             }
             .onAppear {
+                userViewModel.calculateCaloricIntake()
+                calorieGoal = Double(userViewModel.goalCalories)
+                proteinGoal = Double(userViewModel.goalProtein)
+                carbsGoal = Double(userViewModel.goalCarbs)
+                fatsGoal = Double(userViewModel.goalFat)
+                sugarsGoal = Double(userViewModel.goalSugars)
                 selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
+                print(calorieGoal)
             }
             
             if isPopupPresented, let index = foodsEaten.firstIndex(where: { $0.id == selectedFood?.id }) {
@@ -133,11 +168,11 @@ struct Page1: View {
     @Binding var dailyFats: Double
     @Binding var dailySugars: Double
     
-    @State var calorieGoal: Double
-    @State var proteinGoal: Double
-    @State var fatsGoal: Double
-    @State var carbsGoal: Double
-    @State var sugarsGoal: Double
+    @Binding var calorieGoal: Double
+    @Binding var proteinGoal: Double
+    @Binding var fatsGoal: Double
+    @Binding var carbsGoal: Double
+    @Binding var sugarsGoal: Double
     
     @State var showingTop: Bool = true
     
@@ -182,10 +217,10 @@ struct Page3: View {
     @Binding var dailyCarbs: Double
     @Binding var dailyFats: Double
     
-    @State var calorieGoal: Double
-    @State var proteinGoal: Double
-    @State var fatsGoal: Double
-    @State var carbsGoal: Double
+    @Binding var calorieGoal: Double
+    @Binding var proteinGoal: Double
+    @Binding var fatsGoal: Double
+    @Binding var carbsGoal: Double
     
     var calorieProgress: Double {
         min(dailyCalories / calorieGoal, 1.0)

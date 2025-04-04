@@ -61,7 +61,7 @@ struct AddFoodView: View {
                         } else {
                             ScrollView {
                                 LazyVStack {
-                                    ForEach(searchResults) { food in
+                                    ForEach(searchResults.sorted { $0.name < $1.name }) { food in
                                         FoodRowView(food: food)
                                             .onTapGesture {
                                                 self.selectedFood = food
