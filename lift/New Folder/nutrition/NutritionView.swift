@@ -77,7 +77,7 @@ struct NutritionView: View {
                 .background(Color.pink)
                 .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                
+                Spacer()
                 if foodsEaten.isEmpty {
                     Text("Add a food by tapping the button above").font(.headline).padding()
                 } else {
@@ -102,6 +102,7 @@ struct NutritionView: View {
                     .zIndex(1)
                     
                 }
+                Spacer()
             }
             .sheet(isPresented: $showAddFoodView) {
                 AddFoodView(onFoodAdded: addFoodToDailyTotal)
