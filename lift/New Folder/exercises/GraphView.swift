@@ -209,7 +209,7 @@ struct GraphView: View {
             }
             .sheet(isPresented: $showEditExerciseView) {
 //                Text("TODO: add editExercise View")
-                EditExerciseView()
+                EditExerciseView(exerciseName: exerciseName)
             }
             .sheet(isPresented: $showInfo) {
                 GraphInfoView()
