@@ -104,7 +104,7 @@ struct AddFoodView: View {
                             }
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.blue)
+                            .background(Color.pink)
                             .foregroundColor(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
@@ -157,6 +157,13 @@ struct AddFoodView: View {
                     onAddFood: { updatedFood in
                         addToDailyTotal(updatedFood)
                     }
+                )
+            }
+            .alert(isPresented: $isShowingScanError) {
+                Alert(
+                    title: Text("Scan Error"),
+                    message: Text(scanErrorMessage ?? ""),
+                    dismissButton: .default(Text("OK"))
                 )
             }
         }
@@ -246,62 +253,79 @@ struct AddFoodView: View {
     
     func fetchNutritionData(for barcode: String) {
         guard !isFetchingData else { return }
+        isFetchingData = true
         print("📸 Scanned barcode: \(barcode)")
-        let urlString = "https://world.openfoodfacts.net/api/v2/product/\(barcode)"
+        
+        let urlString = "https://world.openfoodfacts.org/api/v2/product/\(barcode).json"
         guard let url = URL(string: urlString) else {
-            scanErrorMessage = "Invalid barcode format."
-            isShowingScanError = true
+            showScanError("Invalid barcode format.")
             return
         }
         
         URLSession.shared.dataTask(with: url) { data, _, error in
+            defer { isFetchingData = false }
+            
             if let error = error {
-                DispatchQueue.main.async {
-                    self.scanErrorMessage = "Network error: \(error.localizedDescription)"
-                    self.isShowingScanError = true
-                }
+                showScanError("Network error: \(error.localizedDescription)")
                 return
             }
             
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let product = json["product"] as? [String: Any],
-                  let name = (product["generic_name"] as? String).flatMap({ $0.isEmpty ? nil : $0 }) ?? product["product_name"] as? String,
-                  let nutriments = product["nutriments"] as? [String: Any] else {
-                DispatchQueue.main.async {
-                    self.scanErrorMessage = "No product data found for this barcode."
-                    self.isShowingScanError = true
-                }
+            guard let data = data else {
+                showScanError("No data returned from server.")
                 return
             }
             
-            let imageUrl = product["image_url"] as? String ?? ""
-            let servingSize = product["serving_size"] as? String ?? "N/A"
-            let calories = nutriments["energy-kcal_serving"] as? Double ?? 0
-            let protein = nutriments["proteins_serving"] as? Double ?? 0
-            let fats = nutriments["fat_serving"] as? Double ?? 0
-            let carbs = nutriments["carbohydrates_serving"] as? Double ?? 0
-            let sugars = nutriments["sugars_serving"] as? Double ?? 0
-            
-            let scannedFood = FoodItem(
-                servingSize: servingSize,
-                name: name,
-                calories: calories,
-                protein: protein,
-                fats: fats,
-                carbs: carbs,
-                sugars: sugars,
-                imageUrl: imageUrl
-            )
-            
-            DispatchQueue.main.async {
-                self.selectedFood = scannedFood
-                self.servings = 1
-                self.isPopupPresented = true
-                self.isScannerPresented = false // Dismiss scanner after successful fetch
-                print("✅ Food scanned: \(scannedFood.name), popup should appear")
+            do {
+                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let product = json["product"] as? [String: Any],
+                      let name = (product["generic_name"] as? String).flatMap({ $0.isEmpty ? nil : $0 }) ?? product["product_name"] as? String,
+                      let nutriments = product["nutriments"] as? [String: Any] else {
+                    showScanError("Invalid response structure or missing fields.")
+                    return
+                }
+
+                let imageUrl = product["image_url"] as? String ?? ""
+                let servingSize = product["serving_size"] as? String ?? "N/A"
+                let calories = nutriments["energy-kcal_serving"] as? Double ?? 0
+                let protein = nutriments["proteins_serving"] as? Double ?? 0
+                let fats = nutriments["fat_serving"] as? Double ?? 0
+                let carbs = nutriments["carbohydrates_serving"] as? Double ?? 0
+                let sugars = nutriments["sugars_serving"] as? Double ?? 0
+                
+                let scannedFood = FoodItem(
+                    servingSize: servingSize,
+                    name: name,
+                    calories: calories,
+                    protein: protein,
+                    fats: fats,
+                    carbs: carbs,
+                    sugars: sugars,
+                    imageUrl: imageUrl
+                )
+                
+                DispatchQueue.main.async {
+                    self.selectedFood = scannedFood
+                    self.servings = 1
+                    self.isScannerPresented = false
+                    self.isPopupPresented = true
+                    print("✅ Scanned food ready: \(scannedFood.name)")
+                }
+            } catch {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("🔍 Raw JSON:\n\(jsonString)")
+                }
+                showScanError("Failed to parse nutrition data.")
             }
         }.resume()
+    }
+
+    private func showScanError(_ message: String) {
+        DispatchQueue.main.async {
+            self.scanErrorMessage = message
+            self.isShowingScanError = true
+            self.isScannerPresented = false
+            print("❌ Scan error: \(message)")
+        }
     }
 }
 
@@ -442,15 +466,12 @@ struct BarcodeScannerSheetView: View {
     
     var body: some View {
         ZStack {
-            Color.black.opacity(0.8) // Dark background for contrast
-            
+            Color.black.opacity(0.8)
             BarcodeScannerView(isPresented: $isPresented, onScan: onScan)
-                .frame(height: UIScreen.main.bounds.height * 0.4) // Scanner takes up 40% of the screen
                 .cornerRadius(20)
                 .padding(.horizontal)
         }
-        .presentationDetents([.medium]) // Makes it appear as a half-screen sheet
-        .presentationDragIndicator(.visible) // Small drag indicator at the top
+        .presentationDragIndicator(.visible)
     }
 }
 

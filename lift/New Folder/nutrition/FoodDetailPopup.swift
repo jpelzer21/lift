@@ -4,6 +4,7 @@ struct FoodDetailPopup: View {
     @State var updatefood: Bool
     @Binding var foodItem: FoodItem
     @Binding var isPresented: Bool
+    @State var currentServings: Double = 1
 
     var onAddFood: (FoodItem) -> Void
     
@@ -76,6 +77,21 @@ struct FoodDetailPopup: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 60)
                 HStack {
+                    if foodItem.servingSize == "Per 100g" {
+                        Button(action: {
+                            if foodItem.servings > 0 {
+                                foodItem.servings -= 0.1
+                            }
+                        }) {
+                            Image(systemName: "minus")
+                                .font(.caption)
+                                .frame(width: 20, height: 20)
+                                .background(Color.gray.opacity(0.75))
+                                .foregroundColor(.white)
+                                .clipShape(Circle())
+                        }
+                        .padding(.horizontal, 10)
+                    }
                     Button(action: {
                         if foodItem.servings > 1 {
                             foodItem.servings -= 1
@@ -88,11 +104,10 @@ struct FoodDetailPopup: View {
                             .foregroundColor(.white)
                             .clipShape(Circle())
                     }
-                    Text("Servings: \(foodItem.servings)")
+                    Text("\(foodItem.servings.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", foodItem.servings) : String(format: "%.1f", foodItem.servings)) Servings")
                         .font(.headline)
                     Button(action: {
                         foodItem.servings += 1
-                        print(foodItem.servings)
                     }) {
                         Image(systemName: "plus")
                             .font(.title2)
@@ -101,9 +116,23 @@ struct FoodDetailPopup: View {
                             .foregroundColor(.white)
                             .clipShape(Circle())
                     }
+                    if foodItem.servingSize == "Per 100g" {
+                        Button(action: {
+                            foodItem.servings += 0.1
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.caption)
+                                .frame(width: 20, height: 20)
+                                .background(Color.gray.opacity(0.75))
+                                .foregroundColor(.white)
+                                .clipShape(Circle())
+                        }
+                        .padding(.horizontal, 10)
+                    }
                 }
                 HStack(spacing: 20) {
                     Button("Cancel") {
+                        foodItem.servings = currentServings
                         isPresented = false
                     }
                     .frame(maxWidth: .infinity)
@@ -145,10 +174,10 @@ struct FoodDetailPopup: View {
         .transition(.move(edge: .bottom))
 //        .animation(.spring(), value: isPresented)
 //        .frame(width: UIScreen.main.bounds.width * 0.85, height: UIScreen.main.bounds.height * 0.75)
+        .onAppear {
+            currentServings = foodItem.servings
+        }
     }
-    
-    
-    
 }
 
 

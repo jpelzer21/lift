@@ -66,6 +66,7 @@ struct NutritionView: View {
                         .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 250)
                 .onChange(of: selectedTabIndex, { oldValue, newValue in
                     UserDefaultsManager.saveSelectedTabIndex(newValue)
                 })
@@ -82,12 +83,18 @@ struct NutritionView: View {
                     Text("Add a food by tapping the button above").font(.headline).padding()
                 } else {
                     List {
+                        let epsilon = 0.0001
                         ForEach(foodsEaten.reversed(), id: \.id) { food in
+                            let isWholeNumber = abs(food.servings - round(food.servings)) < epsilon
+                            let formattedServings = isWholeNumber
+                                ? String(format: "%.0f", round(food.servings))
+                                : String(format: "%.1f", food.servings)
+                            
                             HStack {
-                                Text("\(food.servings) x ")
+                                Text("\(formattedServings) x ")
                                 Text(food.name)
                                 Spacer()
-                                Text("\(String(format: "%.0f", (food.calories ?? 0.0) * Double(food.servings))) cal")
+                                Text("\(String(format: "%.0f", (food.calories ?? 0.0) * food.servings)) cal")
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -114,19 +121,18 @@ struct NutritionView: View {
                 carbsGoal = Double(userViewModel.goalCarbs)
                 fatsGoal = Double(userViewModel.goalFat)
                 sugarsGoal = Double(userViewModel.goalSugars)
+                
                 selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
-                print(calorieGoal)
             }
             
             if isPopupPresented, let index = foodsEaten.firstIndex(where: { $0.id == selectedFood?.id }) {
                 FoodDetailPopup(
-                    updatefood: true, // or false depending on your use case
-                    foodItem: $foodsEaten[index], // Pass a binding to the actual item
+                    updatefood: true,
+                    foodItem: $foodsEaten[index],
                     isPresented: $isPopupPresented,
                     onAddFood: { updatedFood in
-                        // Update the food item in your array
                         if let index = foodsEaten.firstIndex(where: { $0.id == updatedFood.id }) {
                             foodsEaten[index] = updatedFood
                             UserDefaultsManager.saveFoods(foodsEaten)
@@ -180,16 +186,15 @@ struct Page1: View {
     var body: some View {
         VStack {
             ZStack {
-                ProgressCircleView(progress: dailyCalories / calorieGoal, amount: dailyCalories, label: "Calories", size: 175, showingInfo: true)
-                    .frame(width: 175, height: 175)
+                ProgressCircleView(progress: dailyCalories / calorieGoal, amount: dailyCalories, label: "Calories", size: 150, showingInfo: true)
                     .padding()
                 VStack {
                     if showingTop {
                         HStack {
-                            ProgressCircleView(progress: dailySugars / sugarsGoal, amount: dailySugars, label: "Sugars", size: 75, showingInfo: true)
+                            ProgressCircleView(progress: dailySugars / sugarsGoal, amount: dailySugars, label: "Sugars", size: 65, showingInfo: true)
                                 .padding()
                             Spacer()
-                            ProgressCircleView(progress: dailyFats / fatsGoal, amount: dailyFats, label: "Fats", size: 75, showingInfo: true)
+                            ProgressCircleView(progress: dailyFats / fatsGoal, amount: dailyFats, label: "Fats", size: 65, showingInfo: true)
                                 .padding()
                         }
                         .frame(maxWidth: .infinity, maxHeight: 100)
@@ -197,10 +202,10 @@ struct Page1: View {
                     }
                     Spacer()
                     HStack {
-                        ProgressCircleView(progress: dailyProtein / proteinGoal, amount: dailyProtein, label: "Protein", size: 75, showingInfo: true)
+                        ProgressCircleView(progress: dailyProtein / proteinGoal, amount: dailyProtein, label: "Protein", size: 65, showingInfo: true)
                             .padding()
                         Spacer()
-                        ProgressCircleView(progress: dailyCarbs / carbsGoal, amount: dailyCarbs, label: "Carbs", size: 75, showingInfo: true)
+                        ProgressCircleView(progress: dailyCarbs / carbsGoal, amount: dailyCarbs, label: "Carbs", size: 65, showingInfo: true)
                             .padding()
                     }
                     .frame(maxWidth: .infinity, maxHeight: 100)
@@ -280,6 +285,7 @@ struct Page3: View {
             // **Other Macros Section**
             HStack(spacing: 15) {
                 ProgressLineView(value: $dailyProtein, total: $proteinGoal, label: "Protein")
+//                RatioProgressView(carbs: $dailyCarbs, fats: $dailyFats, maxValue: 200)
                 ProgressLineView(value: $dailyCarbs, total: $carbsGoal, label: "Carbs")
                 ProgressLineView(value: $dailyFats, total: $fatsGoal, label: "Fats")
             }
@@ -312,7 +318,7 @@ struct ProgressLineView: View {
                 
                 RoundedRectangle(cornerRadius: 10)
                     .frame(width: max(progress * 100, 0), height: 10) // Match parent width
-                    .foregroundStyle(value < 1 ? .green : .pink)
+                    .foregroundStyle(progress < 1 ? .pink : .green)
 //                    .foregroundStyle(LinearGradient(colors: [.red, .yellow, .green], startPoint: .leading, endPoint: .trailing))
             }
             .frame(width: 100)
@@ -322,6 +328,8 @@ struct ProgressLineView: View {
         }
     }
 }
+
+
 struct ProgressCircleView: View {
     var progress: Double
     var amount: Double
@@ -342,7 +350,7 @@ struct ProgressCircleView: View {
             
             Circle()
                 .trim(from: 0.0, to: min(max(progress, 0), 1))
-                .stroke(AngularGradient(gradient: Gradient(colors: [.red, .yellow, . green]), center: .center), lineWidth: lineWidth)
+                .stroke(AngularGradient(gradient: progress >= 1 ? Gradient(colors: [.green]) : Gradient(colors: [.red, .yellow, . green]), center: .center), lineWidth: lineWidth)
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut, value: progress)
             
@@ -359,6 +367,77 @@ struct ProgressCircleView: View {
         .frame(width: size, height: size)
     }
 }
+
+struct RatioProgressView: View {
+    @Binding var carbs: Double
+    @Binding var fats: Double
+    @State var maxValue: Double
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Macronutrients")
+                .font(.caption)
+                .bold()
+            
+            ZStack(alignment: .center) {
+                // Background track
+                RoundedRectangle(cornerRadius: 10)
+                    .frame(height: 10)
+                    .foregroundColor(Color.gray.opacity(0.3))
+                
+                HStack(spacing: 0) {
+                    // Fats progress (grows left from center)
+                    Rectangle()
+                        .frame(width: progressWidth(for: fats), height: 10)
+                        .foregroundColor(.blue)
+                        .clipShape(RoundedCorner(radius: 10, corners: [.topLeft, .bottomLeft]))
+                    
+                    // Carbs progress (grows right from center)
+                    Rectangle()
+                        .frame(width: progressWidth(for: carbs), height: 10)
+                        .foregroundColor(.orange)
+                        .clipShape(RoundedCorner(radius: 10, corners: [.topRight, .bottomRight]))
+                }
+                .frame(width: 200) // Total width of the progress bar
+            }
+            
+            HStack {
+                Text("\(Int(fats))g fats")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                
+                Spacer()
+                
+                Text("\(Int(carbs))g carbs")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
+            .frame(width: 200)
+        }
+    }
+    
+    private func progressWidth(for value: Double) -> CGFloat {
+        let ratio = min(value / maxValue, 1.0) // Cap at 100%
+        return CGFloat(ratio * 100) // Half of total width (200/2)
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
+
+
 class UserDefaultsManager {
     static let foodKey = "foodsEaten"
     static let dateKey = "lastSavedDate"
@@ -385,13 +464,27 @@ class UserDefaultsManager {
         let dateString = formatter.string(from: today)
         UserDefaults.standard.set(dateString, forKey: dateKey)
     }
+    //reset at 3am
     static func checkForNewDay() {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let todayString = formatter.string(from: Date())
+
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Adjust for 3am cutoff
+        var adjustedDate = now
+        if calendar.component(.hour, from: now) < 3 {
+            // Subtract one day if before 3am
+            adjustedDate = calendar.date(byAdding: .day, value: -1, to: now)!
+        }
+
+        let todayString = formatter.string(from: adjustedDate)
         let lastSavedDate = UserDefaults.standard.string(forKey: dateKey) ?? ""
+
         if todayString != lastSavedDate {
             resetFoods() // Reset the food list if it's a new day
+            UserDefaults.standard.set(todayString, forKey: dateKey)
         }
     }
     static func resetFoods() {
@@ -416,7 +509,7 @@ struct FoodItem: Identifiable, Codable {
     let carbs: Double?
     let sugars: Double?
     let imageUrl: String?
-    var servings: Int = 1
+    var servings: Double = 1
 }
 
 

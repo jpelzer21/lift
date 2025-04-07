@@ -11,12 +11,12 @@ struct AddExerciseView: View {
     @State private var errorMessage: String?
     
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-    let barTypeOptions = ["Barbell", "Dumbbell", "EZ-Bar", "Hex-Bar", "Machine", "Kettlebell", "BodyWeight", "Other"]
+    let barTypeOptions = ["Other", "Barbell", "Dumbbells", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
     
     init(existingExerciseName: String? = nil, existingMuscleGroups: [String]? = nil, existingBarType: String? = nil) {
         _exerciseName = State(initialValue: existingExerciseName ?? "")
         _selectedMuscleGroups = State(initialValue: existingMuscleGroups ?? [])
-        _barType = State(initialValue: existingBarType ?? "Barbell")
+        _barType = State(initialValue: existingBarType ?? "Other")
     }
     
     var body: some View {

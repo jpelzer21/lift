@@ -34,6 +34,7 @@ struct ExerciseListView: View {
                         .default(Text("Z-A")) { viewModel.selectedSortOption = "Alphabetical Z-A"; viewModel.fetchExercises() },
                         .default(Text("Most Recent")) { viewModel.selectedSortOption = "Most Recent"; viewModel.fetchExercises() },
                         .default(Text("Most Sets")) { viewModel.selectedSortOption = "Most Sets"; viewModel.fetchExercises() },
+                        .default(Text("lmuscle Group")) { viewModel.selectedSortOption = "Muscle Group"; viewModel.fetchExercises() },
                         .cancel()
                     ])
                 }

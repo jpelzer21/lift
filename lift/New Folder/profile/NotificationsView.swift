@@ -15,6 +15,7 @@ struct NotificationsView: View {
     @State private var reminderTime = Date()
     
     var body: some View {
+        Text("none of this works yet - it is just a tentative layout")
         Form {
             Section(header: Text("Notification Preferences")) {
                 Toggle("Push Notifications", isOn: $pushNotificationsEnabled)

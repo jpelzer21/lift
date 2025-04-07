@@ -42,6 +42,8 @@ struct MeasurementsView: View {
                             let padding = (maxWeight - minWeight) * 2  // 50% padding for better spacing
                             let lowerBound = minWeight - padding
                             let upperBound = maxWeight + padding
+                            
+                            let sortedMeasurements = measurements.sorted { $0.date < $1.date }
 
                             Chart(measurements) { entry in
                                 PointMark(
@@ -58,7 +60,28 @@ struct MeasurementsView: View {
                                 .foregroundStyle(.pink)
                             }
                             .chartXAxis {
-                                AxisMarks(position: .bottom, values: .stride(by: .day, count: 1))
+                                let calendar = Calendar.current
+                                if let firstDate = sortedMeasurements.first?.date,
+                                   let lastDate = sortedMeasurements.last?.date {
+                                    
+                                    let monthComponents = calendar.dateComponents([.month], from: firstDate, to: lastDate)
+                                    
+                                    if let monthDifference = monthComponents.month, monthDifference >= 1 {
+                                        // Multiple months — show one label per month
+                                        AxisMarks(values: .stride(by: .month)) { value in
+                                            AxisGridLine()
+                                            AxisTick()
+                                            AxisValueLabel(format: .dateTime.month(.abbreviated), centered: true)
+                                        }
+                                    } else {
+                                        // One month — show one label per week
+                                        AxisMarks(values: .stride(by: .weekOfYear)) { value in
+                                            AxisGridLine()
+                                            AxisTick()
+                                            AxisValueLabel(format: .dateTime.month().day(), centered: true)
+                                        }
+                                    }
+                                }
                             }
                             .chartYAxis {
                                 AxisMarks(position: .leading, values: .automatic)

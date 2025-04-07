@@ -4,6 +4,7 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct GraphView: View {
+//    @State private var viewModel: ExerciseViewModel
     @State private var exerciseSets: [ExerciseSet] = []
     @State private var selectedMetric: Metric = .volume
     @State private var isLoading = true
@@ -207,8 +208,8 @@ struct GraphView: View {
                 .padding()
             }
             .sheet(isPresented: $showEditExerciseView) {
-                Text("TODO: add editExercise View")
-//                EditExerciseView(exerciseName: exerciseName)
+//                Text("TODO: add editExercise View")
+                EditExerciseView()
             }
             .sheet(isPresented: $showInfo) {
                 GraphInfoView()

@@ -121,7 +121,7 @@ struct WorkoutCard: View {
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        formatter.dateFormat = "EEEE, MMMM d, yyyy"
         return formatter.string(from: date)
     }
 }

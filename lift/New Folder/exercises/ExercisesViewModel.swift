@@ -35,9 +35,11 @@ class ExercisesViewModel: ObservableObject {
             case "Most Sets":
                 query = query.order(by: "setCount", descending: true)
             case "Alphabetical A-Z":
-                query = query.order(by: "name", descending: false) // Ensure name sorting works
+                query = query.order(by: "name", descending: false)
             case "Alphabetical Z-A":
                 query = query.order(by: "name", descending: true)
+            case "Muscle Groups":
+                query = query.order(by: "muscleGroups", descending: true)
             default:
                 query = query.order(by: "name", descending: false) // Default to A-Z ordering
         }

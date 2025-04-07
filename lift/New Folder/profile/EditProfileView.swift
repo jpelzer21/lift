@@ -16,7 +16,7 @@ struct EditProfileView: View {
     @State private var goal: String
 
     let genderOptions = ["Not Set", "Male", "Female", "Other"]
-    let activityOptions = ["Not Set", "Sedentary", "light exercise", "moderate exercise", "heavy exercise", "athlete"]
+    let activityOptions = ["Not Set", "Sedentary", "Light Exercise", "Moderate Exercise", "Heavy Exercise", "Athlete"]
     let goalOptions = ["Not Set", "Lose Weight", "Maintain Weight", "Gain Muscle"]
     
     let ageOptions = Array(5...100)
@@ -63,7 +63,7 @@ struct EditProfileView: View {
                         }
                     }
 
-                    Section(header: Text("Health & Fitness Info")) {
+                    Section(header: Text("Calculate Nutrition Info")) {
                         HStack {
                             Text("Date of Birth")
                             Spacer()

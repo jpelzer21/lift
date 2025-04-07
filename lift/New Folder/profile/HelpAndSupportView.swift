@@ -18,6 +18,7 @@ struct HelpAndSupportView: View {
     ]
     
     var body: some View {
+        Text("none of this works yet - it is just a tentative layout")
         List {
             Section(header: Text("Help Resources")) {
                 ForEach(supportItems, id: \.0) { item in
