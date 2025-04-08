@@ -11,7 +11,7 @@ struct AddExerciseView: View {
     @State private var errorMessage: String?
     
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-    let barTypeOptions = ["Other", "Barbell", "Dumbbells", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
+    let barTypeOptions = ["Other", "Barbell", "Dumbbells", "Cable", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
     
     init(existingExerciseName: String? = nil, existingMuscleGroups: [String]? = nil, existingBarType: String? = nil) {
         _exerciseName = State(initialValue: existingExerciseName ?? "")

@@ -164,9 +164,8 @@ struct WorkoutView: View {
                         saveWorkoutAsTemplate()
                         saveWorkout()
                         saveExercises()
+                        userViewModel.updateStreak()
                         presentationMode.wrappedValue.dismiss()
-                        // Hide toast after 2 seconds
-                        
                     },
                     secondaryButton: .cancel(Text("Stay"))
                 )

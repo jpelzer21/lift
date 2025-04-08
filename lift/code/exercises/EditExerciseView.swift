@@ -15,7 +15,7 @@ struct EditExerciseView: View {
     @State private var showingAlert: Bool = false
 
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
-    let barTypeOptions = ["Other", "Barbell", "Dumbbells", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
+    let barTypeOptions = ["Other", "Barbell", "Dumbbells", "Cable", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
 
     var body: some View {
         NavigationView {

@@ -35,7 +35,9 @@ struct ExerciseSelectionView: View {
                 }
                 
                 // Existing exercises section
-                ForEach(userViewModel.userExercises) { exercise in
+                ForEach(userViewModel.userExercises.sorted(by: {
+                    ($0.muscleGroups.first ?? "") < ($1.muscleGroups.first ?? "")
+                })) { exercise in
                     Button(action: {
                         selectedExercise.name = exercise.name
                         // Copy other properties if needed
@@ -44,6 +46,9 @@ struct ExerciseSelectionView: View {
                         HStack {
                             Text(exercise.name)
                             Spacer()
+                            if exercise.muscleGroups.count > 0 {
+                                Text(exercise.muscleGroups[0])
+                            }
                             if exercise.name == selectedExercise.name {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(.blue)

@@ -672,7 +672,7 @@ extension UserViewModel {
 extension UserViewModel {
     func calculateCaloricIntake() {
         guard let dob = dob,
-              let age = calculateAge(from: dob) else {
+              let age = (calculateAge(from: dob) ?? 0 > 0 ? calculateAge(from: dob) : 1) else {
             return
         }
         let weightKg = (Double(weight) ?? 160)*0.45359237
