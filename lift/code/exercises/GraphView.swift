@@ -155,9 +155,13 @@ struct GraphView: View {
                             .frame(height: 250)
                             .padding()
                         } else {
-                            Text("Not enough data to display a trend.")
-                                .foregroundColor(.gray)
-                                .padding()
+                            VStack {
+                                Spacer()
+                                Text("Not enough data to display a trend.")
+                                    .foregroundColor(.gray)
+                                    .padding()
+                                Spacer()
+                            }
                         }
                     }
                 }

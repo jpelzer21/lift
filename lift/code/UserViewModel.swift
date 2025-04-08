@@ -30,6 +30,7 @@ class UserViewModel: ObservableObject {
     @Published var prCount: Int = 0
     @Published var dayStreak: Int = 0
     @Published var lastWorkoutDate: Date?
+    private var lastIncrementedDate: Date? = nil
     @Published var memberSince: Date = Date()
     
     // Profile Completion
@@ -165,6 +166,7 @@ extension UserViewModel {
     // Set up listener on user information - name, age, gender, etc
     private func setupRealtimeListener() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
+        listener?.remove()
         listener = db.collection("users").document(userID)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
@@ -177,6 +179,7 @@ extension UserViewModel {
                     return
                 }
                 print("Received stats update: \(data)")
+                print("hi")
                 self.updateStats(from: data)
             }
     }
@@ -195,43 +198,71 @@ extension UserViewModel {
             self.lastWorkoutDate = newLastWorkoutDate
         }
         
-        // Recalculate streak if needed
-        if let lastWorkoutDate = newLastWorkoutDate {
-            self.calculateStreak(lastWorkoutDate: lastWorkoutDate)
+        let newestWorkoutDate: Date?
+        if let timestamp = data["lastWorkoutDate"] as? Timestamp {
+            newestWorkoutDate = timestamp.dateValue()
+        } else {
+            print("⚠️ lastWorkoutDate missing or invalid, skipping streak check")
+            newestWorkoutDate = nil
         }
+        
+        if let validWorkoutDate = newestWorkoutDate {
+            self.calculateStreak(lastWorkoutDate: validWorkoutDate)
+        }
+        
+//        // Recalculate streak if needed
+//        if let lastWorkoutDate = newLastWorkoutDate {
+//            self.calculateStreak(lastWorkoutDate: lastWorkoutDate)
+//        }
     }
 
     // Calculate how many days in a row the user has worked out
     private func calculateStreak(lastWorkoutDate: Date) {
         let calendar = Calendar.current
-        let today = Date()
-        // Reset streak if last workout was more than 1 days ago
-        if let daysSinceLastWorkout = calendar.dateComponents([.day], from: lastWorkoutDate, to: today).day, daysSinceLastWorkout > 1 {
-            if self.dayStreak > 0 {
-                resetStreak()
-            }
+        let today = calendar.startOfDay(for: Date())
+        let lastWorkout = calendar.startOfDay(for: lastWorkoutDate)
+
+        let daysDifference = calendar.dateComponents([.day], from: lastWorkout, to: today).day ?? 0
+
+        if daysDifference == 0 {
+            // Worked out today, keep streak as-is
             return
-        }
-        // Increment streak if last workout was yesterday
-        if calendar.isDateInYesterday(lastWorkoutDate) {
-            incrementStreak()
+        } else if daysDifference == 1 {
+            // Worked out yesterday, keep streak as-is
+            return
+        } else {
+            // Missed at least one day — streak broken
+            if self.dayStreak != 0 {
+                self.dayStreak = 0
+            }
         }
     }
     
-    private func incrementStreak() {
-        guard let userID = userID else { return }
-        let statsRef = db.collection("users").document(userID)
-        statsRef.setData([
-            "dayStreak": FieldValue.increment(Int64(1))
+    func updateStreak() {
+        guard let userID = Auth.auth().currentUser?.uid else { return }
+
+        let newStreak = self.dayStreak + 1
+        self.dayStreak = newStreak
+
+        db.collection("users").document(userID).setData([
+            "dayStreak": newStreak
         ], merge: true)
     }
 
     private func resetStreak() {
         guard let userID = userID else { return }
+//        isManuallyUpdating = true
         let statsRef = db.collection("users").document(userID)
+        
+        if self.dayStreak == 0 {
+            return // no need to write
+        }
+        
         statsRef.setData([
             "dayStreak": 0
-        ], merge: true)
+        ], merge: true) { _ in
+//            self.isManuallyUpdating = false
+        }
     }
     
     // TODO: fix prCount updating
