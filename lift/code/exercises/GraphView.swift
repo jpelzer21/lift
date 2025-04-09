@@ -10,7 +10,8 @@ struct GraphView: View {
     @State private var isLoading = true
     @State private var showInfo = false
     @State private var showEditExerciseView = false
-    
+    @State private var showFirstSets: Bool = true
+
     let exerciseName: String // name passed through
     
     enum Metric: String, CaseIterable {
@@ -59,6 +60,10 @@ struct GraphView: View {
 
     var body: some View {
         let firstSets = exerciseSets.filter { $0.number == 1 }
+//        let lastSets = exerciseSets.filter { set in
+//            let maxSetNumber = exerciseSets.max(by: { $0.number < $1.number })?.number ?? 0
+//            return set.number == maxSetNumber
+//        }
 //        ScrollView{
             VStack (spacing: 5) {
                 Spacer()
@@ -96,7 +101,6 @@ struct GraphView: View {
                         .padding(.horizontal, 20)
                     }
                 }
-                
                 
                 Picker("Metric", selection: $selectedMetric) {
                     ForEach(Metric.allCases, id: \.self) { metric in
@@ -141,7 +145,6 @@ struct GraphView: View {
                                     .foregroundStyle(Color.pink)
                                     .lineStyle(StrokeStyle(lineWidth: 2))
                                 }
-                                
                             }
                             .chartXAxis {
                                 AxisMarks(position: .bottom) {
@@ -288,7 +291,7 @@ struct GraphInfoView: View {
                 .font(.title)
                 .bold()
             
-            Text("📍 **Dots** represent individual sets, with opacity decreasing for later sets in the same session.\n\n📈 **Line** represents the trend of first sets in each session.\n\n⚖️ **Y-Axis** depends on the selected metric: Weight, Reps, or Volume (Weight × Reps).")
+            Text("**Dots** represent individual sets, with opacity decreasing for later sets in the same session.\n\n**Line** represents the trend of first sets in each session.\n\n **Y-Axis** depends on the selected metric: Weight, Reps, or Volume (Weight × Reps).")
                 .font(.body)
                 .multilineTextAlignment(.leading)
                 .padding()

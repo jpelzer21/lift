@@ -14,7 +14,7 @@ struct HomePageView: View {
     
     
     var body: some View {
-        ScrollView {
+//        ScrollView {
             VStack {
                 Text("Quick Workout:")
                     .font(.title2)
@@ -144,7 +144,7 @@ struct HomePageView: View {
                 Spacer()
             }
             
-        }
+//        }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView) {
             WorkoutView(workoutTitle: $selectedWorkoutTitle, exercises: $selectedExercises)
