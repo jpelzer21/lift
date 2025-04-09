@@ -125,6 +125,7 @@ struct NutritionView: View {
                 selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
+//                print(calorieGoal)
             }
             
             if isPopupPresented, let index = foodsEaten.firstIndex(where: { $0.id == selectedFood?.id }) {
@@ -227,7 +228,7 @@ struct Page3: View {
     @Binding var proteinGoal: Double
     @Binding var fatsGoal: Double
     @Binding var carbsGoal: Double
-    
+        
     var calorieProgress: Double {
         min(dailyCalories / calorieGoal, 1.0)
     }
@@ -511,5 +512,3 @@ struct FoodItem: Identifiable, Codable {
     let imageUrl: String?
     var servings: Double = 1
 }
-
-

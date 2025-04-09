@@ -164,7 +164,6 @@ struct WorkoutView: View {
                         saveWorkoutAsTemplate()
                         saveWorkout()
                         saveExercises()
-                        userViewModel.updateStreak()
                         presentationMode.wrappedValue.dismiss()
                     },
                     secondaryButton: .cancel(Text("Stay"))

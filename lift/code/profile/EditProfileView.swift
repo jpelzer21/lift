@@ -1,6 +1,5 @@
 import SwiftUI
-
-import SwiftUI
+import UIKit
 
 struct EditProfileView: View {
     @ObservedObject var userViewModel: UserViewModel
@@ -14,6 +13,10 @@ struct EditProfileView: View {
     @State private var height: Int
     @State private var activityLevel: String
     @State private var goal: String
+    
+    @State private var profileImage: UIImage?
+    @State private var showImagePicker = false
+    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
 
     let genderOptions = ["Not Set", "Male", "Female", "Other"]
     let activityOptions = ["Not Set", "Sedentary", "Light Exercise", "Moderate Exercise", "Heavy Exercise", "Athlete"]
@@ -45,6 +48,42 @@ struct EditProfileView: View {
     var body: some View {
         NavigationView {
             VStack {
+                HStack {
+                    Spacer()
+                    VStack{
+                        if let image = profileImage {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.gray, lineWidth: 2))
+                                .shadow(radius: 5)
+                                .padding(.top)
+                        } else {
+                            if let base64String = userViewModel.profileURL,
+                               let imageData = Data(base64Encoded: base64String),
+                               let uiImage = UIImage(data: imageData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 80, height: 80)
+                                    .foregroundColor(.blue)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 2))
+                            }
+                        }
+                        HStack {
+                            Button("Choose Photo") {
+                                imagePickerSource = .photoLibrary
+                                showImagePicker = true
+                            }
+                        }
+                        .padding(.bottom, 10)
+                    }
+                    Spacer()
+                }
+                
                 Form {
                     Section(header: Text("Personal Info")) {
                         HStack {
@@ -146,19 +185,70 @@ struct EditProfileView: View {
         .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $profileImage, sourceType: imagePickerSource)
+        }
     }
 
     private func saveChanges() {
+        var base64String: String? = nil
+        
+        if let image = profileImage,
+           let imageData = image.jpegData(compressionQuality: 0.1) {
+            base64String = imageData.base64EncodedString()
+        }
+
+        // Save everything including the base64 string (or nil if not provided)
         userViewModel.updateUserProfile(
-            name: name,
-            email: email,
-            dob: dob,
-            gender: gender,
-            weight: String(weight),
-            height: String(height),
-            activityLevel: activityLevel,
-            goal: goal
+            nameInput: name,
+            emailInput: email,
+            dobInput: dob,
+            genderInput: gender,
+            weightInput: String(weight),
+            heightInput: String(height),
+            activityLevelInput: activityLevel,
+            goalInput: goal,
+            profileImageBase64: base64String
         )
+        
         presentationMode.wrappedValue.dismiss()
+        }
+}
+
+
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    var sourceType: UIImagePickerController.SourceType = .photoLibrary
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePicker
+
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.image = image
+            }
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
     }
 }

@@ -17,6 +17,7 @@ class UserViewModel: ObservableObject {
     @Published var gender: String = "Loading..."
     @Published var activityLevel: String = "Loading..."
     @Published var goal: String = "Loading..."
+    @Published var profileURL: String?
     
     // Calulated Nutrition Info
     @Published var goalCalories: Int = 0
@@ -25,12 +26,6 @@ class UserViewModel: ObservableObject {
     @Published var goalFat: Int = 0
     @Published var goalSugars: Int = 0
     
-    // New Stats Fields
-    @Published var workoutCount: Int = 0
-    @Published var prCount: Int = 0
-    @Published var dayStreak: Int = 0
-    @Published var lastWorkoutDate: Date?
-    private var lastIncrementedDate: Date? = nil
     @Published var memberSince: Date = Date()
     
     // Profile Completion
@@ -43,7 +38,6 @@ class UserViewModel: ObservableObject {
     static let shared = UserViewModel()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
-    private var statsListener: ListenerRegistration?
     private var userID: String? {
         Auth.auth().currentUser?.uid
     }
@@ -55,7 +49,6 @@ class UserViewModel: ObservableObject {
             Auth.auth().removeStateDidChangeListener(listener)
         }
         listener?.remove()
-        statsListener?.remove()
     }
     
     init() {
@@ -76,9 +69,10 @@ class UserViewModel: ObservableObject {
         }
     }
     
+    // Call all of the function needed at start of runtime
     private func initializeForCurrentUser() {
         resetUserData()
-        fetchUserData()
+//        fetchUserData()
         setupRealtimeListener()
         fetchTemplatesRealtime()
         fetchExercises()
@@ -89,7 +83,6 @@ class UserViewModel: ObservableObject {
     func resetUserData() {
         // Cancel any active listeners
         listener?.remove()
-        statsListener?.remove()
         // Reset all published properties
         DispatchQueue.main.async {
             self.templates = []
@@ -101,13 +94,9 @@ class UserViewModel: ObservableObject {
             self.gender = "Loading..."
             self.activityLevel = "Loading..."
             self.goal = "Loading..."
-            self.workoutCount = 0
-            self.prCount = 0
-            self.dayStreak = 0
             self.memberSince = Date()
             self.profileCompletion = 0
             self.userExercises = []
-            self.lastWorkoutDate = nil
         }
     }
 }
@@ -116,6 +105,7 @@ class UserViewModel: ObservableObject {
 
 // MARK: User Information Manegement
 extension UserViewModel {
+    
     // Getting the data about the user - name, age, gender, etc
     func fetchUserData() {
         guard let user = Auth.auth().currentUser else { return }
@@ -144,6 +134,7 @@ extension UserViewModel {
         self.gender = data["gender"] as? String ?? "Not Set"
         self.activityLevel = data["activityLevel"] as? String ?? "Not Set"
         self.goal = data["goal"] as? String ?? "Not Set"
+        self.profileURL = data["profileURL"] as? String ?? ""
         
         if let dobTimestamp = data["dob"] as? Timestamp {
             self.dob = dobTimestamp.dateValue()
@@ -166,7 +157,6 @@ extension UserViewModel {
     // Set up listener on user information - name, age, gender, etc
     private func setupRealtimeListener() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
-        listener?.remove()
         listener = db.collection("users").document(userID)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
@@ -186,128 +176,53 @@ extension UserViewModel {
     
     // Update the user's stats - workoutCount, prCount, streak
     private func updateStats(from data: [String: Any]) {
-        let newWorkoutCount = data["workoutCount"] as? Int ?? 0
-        let newPrCount = data["prCount"] as? Int ?? 0
-        let newDayStreak = data["dayStreak"] as? Int ?? 0
-        let newLastWorkoutDate = (data["lastWorkoutDate"] as? Timestamp)?.dateValue()
-        
+        let newProfileURL = data["profileURL"] as? String ?? ""
+
         DispatchQueue.main.async {
-            self.workoutCount = newWorkoutCount
-            self.prCount = newPrCount
-            self.dayStreak = newDayStreak
-            self.lastWorkoutDate = newLastWorkoutDate
-        }
-        
-        let newestWorkoutDate: Date?
-        if let timestamp = data["lastWorkoutDate"] as? Timestamp {
-            newestWorkoutDate = timestamp.dateValue()
-        } else {
-            print("⚠️ lastWorkoutDate missing or invalid, skipping streak check")
-            newestWorkoutDate = nil
-        }
-        
-        if let validWorkoutDate = newestWorkoutDate {
-            self.calculateStreak(lastWorkoutDate: validWorkoutDate)
-        }
-        
-//        // Recalculate streak if needed
-//        if let lastWorkoutDate = newLastWorkoutDate {
-//            self.calculateStreak(lastWorkoutDate: lastWorkoutDate)
-//        }
-    }
+            self.userName = data["name"] as? String ?? self.userName
+            self.userEmail = data["email"] as? String ?? self.userEmail
+            self.memberSince = (data["createdAt"] as? Timestamp)?.dateValue() ?? self.memberSince
+            self.dob = (data["dob"] as? Timestamp)?.dateValue() ?? self.dob
+            self.gender = data["gender"] as? String ?? self.gender
+            self.weight = data["weight"] as? String ?? self.weight
+            self.height = data["height"] as? String ?? self.height
+            self.activityLevel = data["activityLevel"] as? String ?? self.activityLevel
+            self.goal = data["goal"] as? String ?? self.goal
 
-    // Calculate how many days in a row the user has worked out
-    private func calculateStreak(lastWorkoutDate: Date) {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let lastWorkout = calendar.startOfDay(for: lastWorkoutDate)
-
-        let daysDifference = calendar.dateComponents([.day], from: lastWorkout, to: today).day ?? 0
-
-        if daysDifference == 0 {
-            // Worked out today, keep streak as-is
-            return
-        } else if daysDifference == 1 {
-            // Worked out yesterday, keep streak as-is
-            return
-        } else {
-            // Missed at least one day — streak broken
-            if self.dayStreak != 0 {
-                self.dayStreak = 0
+            // 👇 Only overwrite profileURL if it changed
+            if self.profileURL != newProfileURL && !newProfileURL.isEmpty {
+                self.profileURL = newProfileURL
             }
         }
     }
     
-    func updateStreak() {
-        guard let userID = Auth.auth().currentUser?.uid else { return }
-
-        let newStreak = self.dayStreak + 1
-        self.dayStreak = newStreak
-
-        db.collection("users").document(userID).setData([
-            "dayStreak": newStreak
-        ], merge: true)
-    }
-
-    private func resetStreak() {
-        guard let userID = userID else { return }
-//        isManuallyUpdating = true
-        let statsRef = db.collection("users").document(userID)
-        
-        if self.dayStreak == 0 {
-            return // no need to write
-        }
-        
-        statsRef.setData([
-            "dayStreak": 0
-        ], merge: true) { _ in
-//            self.isManuallyUpdating = false
-        }
-    }
-    
-    // TODO: fix prCount updating
-    // Is the set that is passed a personal record for this user?
-    private func isPersonalRecord(exercise: Exercise, set: ExerciseSet) -> Bool {
-        guard set.isCompleted else { return false }
-        let previousSets = userExercises
-            .first { $0.name == exercise.name }?
-            .sets ?? []
-
-        // A set is a PR if either:
-        // 1. It's the first set ever for this exercise
-        if previousSets.isEmpty {
-            return true
-        }
-        // 2. It's a weight PR (heaviest weight ever lifted, regardless of reps)
-        let isWeightPR = !previousSets.contains { $0.weight > set.weight }
-        // 3. It's a rep PR at this weight (most reps ever at this exact weight)
-        let isRepPRAtWeight = !previousSets.contains {
-            $0.weight == set.weight && $0.reps > set.reps
-        }
-        // 4. It's a volume PR (weight × reps is highest ever)
-        let currentVolume = set.weight * Double(set.reps)
-        let isVolumePR = !previousSets.contains {
-            $0.weight * Double($0.reps) > currentVolume
-        }
-        // Consider it a PR if any of these conditions are met
-        return isWeightPR || isRepPRAtWeight || isVolumePR
-    }
-    
     // Update Methods
-    func updateUserProfile(name: String, email: String, dob: Date, gender: String,
-                           weight: String, height: String, activityLevel: String, goal: String) {
+    func updateUserProfile(nameInput: String, emailInput: String, dobInput: Date, genderInput: String,
+                           weightInput: String, heightInput: String, activityLevelInput: String, goalInput: String, profileImageBase64: String?) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
         let userData: [String: Any] = [
-            "name": name,
-            "email": email,
-            "dob": Timestamp(date: dob),
-            "gender": gender,
-            "weight": weight,
-            "height": height,
-            "activityLevel": activityLevel,
-            "goal": goal
+            "name": nameInput,
+            "email": emailInput,
+            "dob": Timestamp(date: dobInput),
+            "gender": genderInput,
+            "weight": weightInput,
+            "height": heightInput,
+            "activityLevel": activityLevelInput,
+            "goal": goalInput,
+            "profileURL" : profileImageBase64 ?? ""
         ]
+        
+        userName = nameInput
+        userEmail = emailInput
+        weight = weightInput
+        height = heightInput
+        dob = dobInput
+        gender = genderInput
+        activityLevel = activityLevelInput
+        goal = goalInput
+        profileURL = profileImageBase64 ?? ""
+        
         
         db.collection("users").document(userID).setData(userData, merge: true) { error in
             if let error = error {
@@ -452,7 +367,6 @@ extension UserViewModel {
             return
         }
         let batch = db.batch()
-        var prCountIncrement = 0
         for exercise in exercises {
             let exerciseRef = db.collection("users")
                 .document(userID)
@@ -480,17 +394,7 @@ extension UserViewModel {
                     "reps": set.reps
                 ]
                 batch.setData(setData, forDocument: newSetRef)
-                if isPersonalRecord(exercise: exercise, set: set) {
-                    prCountIncrement += 1
-                }
             }
-        }
-        // Update PR count if needed
-        if prCountIncrement > 0 {
-            let statsRef = db.collection("users").document(userID)
-            batch.updateData([
-                "prCount": FieldValue.increment(Int64(prCountIncrement))
-            ], forDocument: statsRef)
         }
         batch.commit { error in
             DispatchQueue.main.async {
@@ -532,7 +436,6 @@ extension UserViewModel {
         batch.setData(workoutData, forDocument: workoutRef)
         let statsRef = db.collection("users").document(userID)
         let statsData: [String: Any] = [
-            "workoutCount": FieldValue.increment(Int64(1)),
             "lastWorkoutDate": Timestamp(date: Date())
         ]
         batch.setData(statsData, forDocument: statsRef, merge: true)
@@ -672,7 +575,7 @@ extension UserViewModel {
 extension UserViewModel {
     func calculateCaloricIntake() {
         guard let dob = dob,
-              let age = (calculateAge(from: dob) ?? 0 > 0 ? calculateAge(from: dob) : 1) else {
+              let age = calculateAge(from: dob)  else {
             return
         }
         let weightKg = (Double(weight) ?? 160)*0.45359237
@@ -683,6 +586,7 @@ extension UserViewModel {
         } else {
             bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
         }
+        print(bmr)
         let activityMultiplier: Double = {
             switch activityLevel.lowercased() {
                 case "sedentary": return 1
@@ -700,6 +604,7 @@ extension UserViewModel {
             case "gain muscle": tdee += 300
             default: break
         }
+        print(tdee)
         // Update goal variables
         goalCalories = Int(tdee)
         goalProtein = Int((Double(weight) ?? 160)*1)

@@ -44,9 +44,6 @@ struct CreateFoodView: View {
                 }
                 Section(header: Text("Extra Details")) {
                     TextField("Serving Size", text: $servingSize)
-                    Button("Add Image") {
-                    }
-                    
                 }
                 
                 Button(action: saveFood) {

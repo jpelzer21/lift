@@ -6,7 +6,7 @@
 //
 import SwiftUI
 
-struct ContentView: View {    
+struct ContentView: View {
     @State private var selectedIndex: Int = 0
 //    @State private var templates: [WorkoutTemplate] = [] // Store templates
 //    @State private var isTemplatesLoaded = false // Track if templates are loaded

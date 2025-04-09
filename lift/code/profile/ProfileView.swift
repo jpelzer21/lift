@@ -17,17 +17,17 @@ struct ProfileView: View {
     // UI Constants
     private let cardPadding: CGFloat = 20
     private let cardCornerRadius: CGFloat = 16
-    private let sectionSpacing: CGFloat = 24
+    private let sectionSpacing: CGFloat = 20
     
     var body: some View {
         VStack {
-            ScrollView {
+//            ScrollView {
                 VStack(spacing: sectionSpacing) {
                     // Profile Header
                     profileHeaderSection
                     
                     // Quick Stats
-                    quickStatsSection
+//                    quickStatsSection
                     
                     // Navigation Grid
                     navigationGridSection
@@ -36,7 +36,7 @@ struct ProfileView: View {
                     accountSection
                 }
                 .padding(.vertical)
-            }
+//            }
         }
         .navigationTitle("Profile")
     }
@@ -46,13 +46,17 @@ struct ProfileView: View {
         NavigationLink(destination: EditProfileView(userViewModel: userViewModel)) {
             HStack(spacing: 16) {
                 // Profile Image
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 80, height: 80)
-                    .foregroundColor(.blue)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 2))
+                if let base64String = userViewModel.profileURL,
+                   let imageData = Data(base64Encoded: base64String),
+                   let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(.blue)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 2))
+                }
                 
                 // User Info
                 VStack(alignment: .leading, spacing: 6) {
@@ -100,13 +104,13 @@ struct ProfileView: View {
             
             HStack(spacing: 12) {
                 // Workouts This Week
-                statCard(value: "\(userViewModel.workoutCount)", label: "Workouts", icon: "flame.fill", color: .orange)
-                
-                // PRs This Month
-                statCard(value: "\(userViewModel.prCount)", label: "PRs", icon: "trophy.fill", color: .yellow)
-                
-                // Current Streak
-                statCard(value: "\(userViewModel.dayStreak)", label: "Day Streak", icon: "bolt.fill", color: .green)
+//                statCard(value: "\(userViewModel.workoutCount)", label: "Workouts", icon: "flame.fill", color: .orange)
+//                
+//                // PRs This Month
+//                statCard(value: "\(userViewModel.prCount)", label: "PRs", icon: "trophy.fill", color: .yellow)
+//                
+//                // Current Streak
+//                statCard(value: "\(userViewModel.dayStreak)", label: "Day Streak", icon: "bolt.fill", color: .green)
             }
             
             .padding(.horizontal, cardPadding)
