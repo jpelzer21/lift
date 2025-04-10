@@ -485,8 +485,8 @@ struct ExerciseView: View {
     }
 }
 
-struct Exercise: Identifiable {
-    let id = UUID()
+struct Exercise: Identifiable, Codable {
+    var id = UUID()
     var name: String
     var muscleGroups: [String] = []
     var barType: String = "Barbell"
@@ -494,19 +494,11 @@ struct Exercise: Identifiable {
     var createdAt: Date = Date()
     var setCount: Int = 0
     var allSetsCompleted: Bool = false
-    
-//    id: docID,
-//    name: name,
-//    muscleGroups: muscleGroups,
-//    barType: barType,
-//    sets: sets,
-//    createdAt: createdAt,
-//    setCount: setCount
 }
 
 
-struct ExerciseSet: Identifiable {
-    let id = UUID()
+struct ExerciseSet: Identifiable, Codable {
+    var id = UUID()
     var number: Int
     var weight: Double
     var reps: Int

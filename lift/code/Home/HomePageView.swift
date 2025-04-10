@@ -166,18 +166,22 @@ struct HomePageView: View {
 
                 
                     TabView {
-                        ForEach(viewModel.groups, id: \.id) { group in
+                        ForEach(viewModel.groups) { group in
                             GroupCard(name: group.name)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     print("Tapped on group: \(group.name)")
                                     selectedGroup = group
-                                    showGroupDetail = true
                                 }
                         }
                     }
                     .tabViewStyle(PageTabViewStyle())
-                    
+                    .onAppear {
+                        UIPageControl.appearance().currentPageIndicatorTintColor = UIColor(
+                            colorScheme == .dark ? Color(.white) : Color(.black)
+                        )
+                        UIPageControl.appearance().pageIndicatorTintColor = UIColor(.gray)
+                    }
                     
                     // ----------------------------------------------------------------------------------------------------
                     
@@ -200,21 +204,15 @@ struct HomePageView: View {
         .sheet(isPresented: $showCreateGroup) {
             CreateGroupView()
         }
-        .sheet(item: $selectedGroup) {_ in
-            if let group = selectedGroup {
-                GroupDetailView(group: group)
-            }
+        .sheet(item: $selectedGroup) { group in
+            GroupDetailView(group: group)
         }
     }
     
 }
  
- struct WorkoutTemplate: Identifiable {
-     let id: String // Firestore document ID
-     let name: String
-     let exercises: [Exercise]
- }
- 
+
+
  extension View {
      func homeButtonStyle() -> some View {
          self.modifier(HomeButtonStyle())

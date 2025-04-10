@@ -9,7 +9,8 @@
 import SwiftUI
 
 struct GroupCard: View {
-    let name: String // Changed to take full group object
+    @Environment(\.colorScheme) var colorScheme
+    let name: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -26,13 +27,10 @@ struct GroupCard: View {
         .frame(width: 300, height: 150)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color(colorScheme == .dark ? Color(.systemGray6) : .white))
                 .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(.systemGray5), lineWidth: 1)
-        )
+        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -47,10 +45,14 @@ struct WorkoutGroup: Identifiable {
     var templates: [WorkoutTemplate]
 }
 
+struct WorkoutTemplate: Identifiable, Codable {
+    var id: String // Firestore document ID
+    let name: String
+    let exercises: [Exercise]
+}
 
 
-//
-//
+
 //let sampleGroup = WorkoutGroup(
 //    id: "group123",
 //    name: "Morning Workout Crew",

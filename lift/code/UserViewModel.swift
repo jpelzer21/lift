@@ -73,7 +73,7 @@ class UserViewModel: ObservableObject {
     // Call all of the function needed at start of runtime
     private func initializeForCurrentUser() {
         resetUserData()
-//        fetchUserData()
+        fetchUserData()
         setupRealtimeListener()
         fetchTemplatesRealtime()
         fetchUserGroups()
@@ -137,7 +137,7 @@ extension UserViewModel {
         self.activityLevel = data["activityLevel"] as? String ?? "Not Set"
         self.goal = data["goal"] as? String ?? "Not Set"
         self.profileURL = data["profileURL"] as? String ?? ""
-        self.groups = data["groups"] as? [WorkoutGroup] ?? []
+//        self.groups = data["groups"] as? [WorkoutGroup] ?? []
         
         if let dobTimestamp = data["dob"] as? Timestamp {
             self.dob = dobTimestamp.dateValue()
@@ -171,8 +171,6 @@ extension UserViewModel {
                     print("No data received from listener")
                     return
                 }
-                print("Received stats update: \(data)")
-                print("hi")
                 self.updateStats(from: data)
             }
     }
@@ -265,6 +263,7 @@ extension UserViewModel {
             return
         }
         isLoading = true
+        listener?.remove()
         listener = db.collection("users").document(userID).collection("templates")
             .order(by: "lastEdited", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -577,71 +576,140 @@ extension UserViewModel {
         }
         
         db.collection("users").document(userID).collection("groups")
-          .addSnapshotListener { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                print("❌ Error fetching user's groups: \(error.localizedDescription)")
-                return
-            }
-            
-            // First get all group references from user's groups subcollection
-            let userGroups = snapshot?.documents.compactMap { doc -> (groupId: String, role: String)? in
-                let data = doc.data()
-                guard let groupId = data["groupId"] as? String else { return nil }
-                let role = data["role"] as? String ?? "member"
-                return (groupId, role)
-            } ?? []
-            
-            // If no groups found, clear existing data and return
-            guard !userGroups.isEmpty else {
-                self.groups = []
-                return
-            }
-            
-            // Fetch the actual group documents in batch
-            let groupIds = userGroups.map { $0.groupId }
-            db.collection("groups").whereField(FieldPath.documentID(), in: groupIds)
-              .getDocuments(source: .default) { [weak self] (snapshot, error) in
+            .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
                 if let error = error {
-                    print("❌ Error fetching group details: \(error.localizedDescription)")
+                    print("❌ Error fetching user's groups: \(error.localizedDescription)")
                     return
                 }
                 
-                // Map to our WorkoutGroup model
-                self.groups = snapshot?.documents.compactMap { doc -> WorkoutGroup? in
+                // Get user group references
+                let userGroups = snapshot?.documents.compactMap { doc -> (groupId: String, role: String)? in
                     let data = doc.data()
-                    let groupId = doc.documentID
-                    
-                    // Find the user's role in this group
-                    let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
-                    
-                    let name = data["name"] as? String ?? "Unnamed Group"
-                    let description = data["description"] as? String ?? ""
-                    let memberCount = data["memberCount"] as? Int ?? 1
-                    let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
-                    
-                    return WorkoutGroup(id: groupId,
-                                        name: name,
-                                        description: description,
-                                        memberCount: memberCount,
-                                        createdAt: createdAt,
-                                        isAdmin: userID == "admin",
-                                        templates: []
-                                        )
-//                        id: groupId,
-//                        name: name,
-//                        description: description,
-//                        memberCount: memberCount,
-//                        createdAt: createdAt,
-//                        isAdmin: userRole == "admin",
-//                        templates: [] // Templates would be fetched separately if needed
-//                    )
+                    guard let groupId = data["groupId"] as? String else { return nil }
+                    let role = data["role"] as? String ?? "member"
+                    return (groupId, role)
                 } ?? []
+                
+                guard !userGroups.isEmpty else {
+                    self.groups = []
+                    return
+                }
+                
+                let groupIds = userGroups.map { $0.groupId }
+                
+                self.db.collection("groups")
+                    .whereField(FieldPath.documentID(), in: groupIds)
+                    .getDocuments(source: .default) { [weak self] snapshot, error in
+                        guard let self = self else { return }
+
+                        if let error = error {
+                            print("❌ Error fetching group details: \(error.localizedDescription)")
+                            return
+                        }
+
+                        let fetchedGroups = snapshot?.documents.compactMap { doc -> WorkoutGroup? in
+                            let data = doc.data()
+                            let groupId = doc.documentID
+                            
+                            // Match with user's role
+                            let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
+
+                            let name = data["name"] as? String ?? "Unnamed Group"
+                            let description = data["description"] as? String ?? ""
+                            let memberCount = data["memberCount"] as? Int ?? 1
+                            let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+
+                            var workoutGroup = WorkoutGroup(
+                                id: groupId,
+                                name: name,
+                                description: description,
+                                memberCount: memberCount,
+                                createdAt: createdAt,
+                                isAdmin: userRole == "admin",
+                                templates: []
+                            )
+
+                            // Fetch templates for each group
+                            self.fetchGroupTemplates(for: groupId) { templates in
+                                workoutGroup.templates = templates
+                            }
+                            
+                            return workoutGroup
+                        } ?? []
+                        
+                        self.groups = fetchedGroups
+                    }
             }
-        }
+    }
+
+    func fetchGroupTemplates(for groupId: String, completion: @escaping ([WorkoutTemplate]) -> Void) {
+        db.collection("groups").document(groupId).collection("templates")
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("❌ Error fetching templates for group \(groupId): \(error.localizedDescription)")
+                    completion([])
+                    return
+                }
+                
+                let templates = snapshot?.documents.compactMap { doc -> WorkoutTemplate? in
+                    let data = doc.data()
+                    guard let name = data["name"] as? String,
+                          let exercisesData = data["exercises"] as? [[String: Any]] else {
+                        print("❌ Missing required fields in document \(doc.documentID)")
+                        return nil
+                    }
+                    
+                    let exercises = exercisesData.compactMap { exerciseDict -> Exercise? in
+                        guard let exerciseName = exerciseDict["name"] as? String,
+                              let setsData = exerciseDict["sets"] as? [[String: Any]] else {
+                            print("❌ Missing exercise fields in document \(doc.documentID)")
+                            return nil
+                        }
+                        
+                        let sets = setsData.compactMap { setDict -> ExerciseSet? in
+                            guard let reps = setDict["reps"] as? Int,
+                                  let setNum = setDict["setNum"] as? Int,
+                                  let weight = setDict["weight"] as? Double,
+                                  let dateValue = setDict["date"] else {
+                                return nil
+                            }
+                            
+                            // Handle both Timestamp and direct date values
+                            let date: Date
+                            if let timestamp = dateValue as? Timestamp {  // Firestore's Timestamp type
+                                date = timestamp.dateValue()
+                            } else if let seconds = dateValue as? Double {  // Unix timestamp
+                                date = Date(timeIntervalSince1970: seconds)
+                            } else if let dateString = dateValue as? String {  // ISO string
+                                date = ISO8601DateFormatter().date(from: dateString) ?? Date()
+                            } else {
+                                date = Date()  // Fallback
+                            }
+                            
+                            return ExerciseSet(
+                                id: UUID(),
+                                number: setNum,
+                                weight: weight,
+                                reps: reps,
+                                date: date,
+                                isCompleted: false
+                            )
+                        }
+                        
+                        return Exercise(name: exerciseName, sets: sets)
+                    }
+                    
+                    return WorkoutTemplate(
+                        id: doc.documentID,
+                        name: name,
+                        exercises: exercises
+                    )
+                } ?? []
+                
+                completion(templates)
+            }
     }
     
 }

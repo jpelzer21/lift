@@ -1,3 +1,12 @@
+//
+//  TemplatePickerView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/10/25.
+//
+
+import SwiftUI
+
 struct TemplatePickerView: View {
     let templates: [WorkoutTemplate]
     let onSelect: (WorkoutTemplate) -> Void
