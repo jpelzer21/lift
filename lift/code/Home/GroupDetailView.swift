@@ -7,222 +7,136 @@
 
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
-// Detailed Group View
 struct GroupDetailView: View {
     let group: WorkoutGroup
-    @State private var selectedTab: GroupDetailTab = .about
-    @State private var showInviteView = false
-    @Environment(\.dismiss) var dismiss
-    
-    enum GroupDetailTab: String, CaseIterable {
-        case about = "About"
-        case members = "Members"
-        case templates = "Templates"
-    }
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Header with cover image
-                ZStack(alignment: .bottomLeading) {
-                    Color(.systemGray5)
-                        .frame(height: 120)
-                    
-                    Text(group.name)
-                        .font(.title.bold())
-                        .foregroundColor(.primary)
-                        .padding()
-                }
-                
-                // Tab selector
-                Picker("Group Sections", selection: $selectedTab) {
-                    ForEach(GroupDetailTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                
-                // Tab content
-                TabView(selection: $selectedTab) {
-                    AboutGroupTab(group: group)
-                        .tag(GroupDetailTab.about)
-                    
-                    MembersTab(group: group)
-                        .tag(GroupDetailTab.members)
-                    
-                    GroupTemplatesTab(group: group)
-                        .tag(GroupDetailTab.templates)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                
-                Spacer()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showInviteView = true }) {
-                        Image(systemName: "person.badge.plus")
-                    }
-                }
-                
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .sheet(isPresented: $showInviteView) {
-//                InviteMembersView(group: group)
-            }
-        }
-    }
-}
+    @Environment(\.dismiss) private var dismiss
+    @State private var showConfirmation = false
 
-// MARK: - Subviews
-
-struct AboutGroupTab: View {
-    let group: WorkoutGroup
-    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Description")
-                    .font(.headline)
                 
-                Text(group.description.isEmpty ? "No description provided" : group.description)
+                // Group Name
+                Text(group.name)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                
+                // Description
+                Text(group.description)
                     .font(.body)
+                    .foregroundColor(.secondary)
+                
+                // Info Section
+                HStack {
+                    Label("\(group.memberCount) members", systemImage: "person.3.fill")
+                    Spacer()
+                    Label("Created: \(formattedDate(group.createdAt))", systemImage: "calendar")
+                }
+                .font(.subheadline)
+                .foregroundColor(.gray)
+
+                if group.isAdmin {
+                    Text("You are an admin of this group")
+                        .font(.footnote)
+                        .foregroundColor(.green)
+                        .padding(.top, 4)
+                }
                 
                 Divider()
                 
-                GroupInfoRow(icon: "person.2", title: "Members", value: "\(group.memberCount)")
-                GroupInfoRow(icon: "calendar", title: "Created", value: group.createdAt.formatted(date: .long, time: .omitted))
-//                GroupInfoRow(icon: "clock", title: "Last Active", value: group.lastActivity?.formatted(.relative(presentation: .named)) ?? "Unknown")
+                // Templates Section
+                Text("Workout Templates")
+                    .font(.title2)
+                    .fontWeight(.semibold)
                 
-                if group.isAdmin {
-                    Divider()
-                    Text("Admin Tools")
-                        .font(.headline)
-                    Button("Edit Group Info") { /* ... */ }
-                        .buttonStyle(.bordered)
+                if group.templates.isEmpty {
+                    Text("No templates available.")
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                } else {
+//                    VStack(alignment: .leading, spacing: 8) {
+//                        ForEach(group.templates, id: \.id) { template in
+//                            VStack(alignment: .leading, spacing: 4) {
+//                                Text(template.name)
+//                                    .font(.headline)
+//                                Text(template.description)
+//                                    .font(.subheadline)
+//                                    .foregroundColor(.gray)
+//                            }
+//                            .padding()
+//                            .background(Color(.secondarySystemBackground))
+//                            .cornerRadius(10)
+//                        }
+//                    }
                 }
+
+                Divider()
+                
+                // Leave Group Button
+                Button(role: .destructive) {
+                    showConfirmation = true
+                } label: {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Leave Group")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 20)
+
+                Spacer()
             }
             .padding()
         }
+        .confirmationDialog("Are you sure you want to leave this group?", isPresented: $showConfirmation, titleVisibility: .visible) {
+            Button("Leave Group", role: .destructive) {
+                leaveGroup()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
-}
-
-struct MembersTab: View {
-    let group: WorkoutGroup
-    @State private var members: [GroupMember] = []
-    @State private var isLoading = false
     
-    var body: some View {
-        List {
-            ForEach(members) { member in
-                HStack {
-                    Image(systemName: "person.circle.fill")
-                        .font(.title)
-                        .foregroundColor(.secondary)
-                    
-                    VStack(alignment: .leading) {
-                        Text(member.name)
-                            .font(.headline)
-                        Text(member.role.capitalized)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    if member.isOwner {
-                        Image(systemName: "crown.fill")
-                            .foregroundColor(.yellow)
-                    }
-                }
+    // MARK: - Helper Methods
+
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+    
+    private func leaveGroup() {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("Error: User not logged in.")
+            return
+        }
+
+        let db = Firestore.firestore()
+        let userGroupRef = db.collection("users").document(userId).collection("groups").document(group.id)
+        let groupMembersRef = db.collection("groups").document(group.id).collection("members").document(userId)
+        let groupRef = db.collection("groups").document(group.id)
+
+        let batch = db.batch()
+
+        // Remove group from user's collection
+        batch.deleteDocument(userGroupRef)
+
+        // Remove user from group's members collection
+        batch.deleteDocument(groupMembersRef)
+
+        // Decrease member count by 1 (atomic decrement)
+        batch.updateData(["memberCount": FieldValue.increment(Int64(-1))], forDocument: groupRef)
+
+        batch.commit { error in
+            if let error = error {
+                print("Error leaving group: \(error.localizedDescription)")
+                // Optionally: show user feedback here
+            } else {
+                print("Successfully left the group and updated member count.")
+                dismiss()
             }
         }
-        .overlay {
-            if isLoading {
-                ProgressView()
-            } else if members.isEmpty {
-                ContentUnavailableView("No Members", systemImage: "person.2.slash")
-            }
-        }
-        .task {
-            await loadMembers()
-        }
-    }
-    
-    private func loadMembers() async {
-        isLoading = true
-        // Fetch members from Firestore
-        // members = await GroupService.fetchMembers(groupId: group.id)
-        isLoading = false
     }
 }
-
-struct GroupTemplatesTab: View {
-    let group: WorkoutGroup
-    @State private var sharedTemplates: [WorkoutTemplate] = []
-    
-    var body: some View {
-        Text("")
-//        TemplateGridView(templates: sharedTemplates)
-//            .overlay {
-//                if sharedTemplates.isEmpty {
-//                    ContentUnavailableView(
-//                        "No Shared Templates",
-//                        systemImage: "list.bullet.rectangle",
-//                        description: Text("Members haven't shared any templates yet")
-//                    )
-//                }
-//            }
-//            .task {
-//                // sharedTemplates = await GroupService.fetchSharedTemplates(groupId: group.id)
-//            }
-    }
-}
-
-// MARK: - Supporting Views
-
-struct GroupInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Label(title, systemImage: icon)
-            Spacer()
-            Text(value)
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-// MARK: - Data Models
-
-struct GroupMember: Identifiable {
-    let id: String
-    let name: String
-    let role: String // "admin", "member"
-    let isOwner: Bool
-    let joinDate: Date
-}
-
-// MARK: - Preview
-//
-//struct GroupDetailView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        GroupDetailView(group: WorkoutGroup(
-//            id: "1",
-//            name: "Morning Workout Crew",
-//            description: "Group for early risers who want to get their workout done before work",
-//            memberCount: 12,
-//            createdAt: Date().addingTimeInterval(-86400 * 7),
-//            lastActivity: Date().addingTimeInterval(-3600),
-//            templates: [],
-//            isAdmin: true
-//        ))
-//    }
-//}

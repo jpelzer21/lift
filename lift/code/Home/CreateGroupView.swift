@@ -1,19 +1,30 @@
+//
+//  CreateGroupView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/9/25.
+//
+
+
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 struct CreateGroupView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var groupName: String = ""
     @State private var groupDescription: String = ""
+    @State private var groupCode: String = ""
     @State private var isCreating = false
     @State private var errorMessage: String?
 
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                Text("Create a New Group")
-                    .font(.title2)
-                    .fontWeight(.semibold)
+//                Text("Create a New Group")
+//                    .font(.title2)
+//                    .fontWeight(.semibold)
 
                 TextField("Group Name", text: $groupName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -22,6 +33,16 @@ struct CreateGroupView: View {
                 TextField("Description (optional)", text: $groupDescription)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding(.horizontal)
+                
+                TextField("Group Code (e.g. ABC123)", text: $groupCode)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                    .autocapitalization(.allCharacters)
+                    .disableAutocorrection(true)
+                    .onChange(of: groupCode) { _, newValue in
+                        let filtered = newValue.uppercased().filter { $0.isLetter || $0.isNumber }
+                        groupCode = String(filtered.prefix(8))
+                    }
 
                 if let error = errorMessage {
                     Text(error)
@@ -47,7 +68,7 @@ struct CreateGroupView: View {
 
                 Spacer()
             }
-            .padding()
+            .padding(.vertical, 25)
             .navigationTitle("Create Group")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -60,23 +81,94 @@ struct CreateGroupView: View {
     }
 
     private func createGroup() {
+        // Validate inputs
         guard !groupName.isEmpty else {
-            errorMessage = "Group name is required."
+            errorMessage = "Group name cannot be empty"
             return
         }
-
+        
+        guard groupCode.count >= 4 else {
+            errorMessage = "Group code must be at least 4 characters"
+            return
+        }
+        
         isCreating = true
         errorMessage = nil
-
-        // 🔧 Replace this with actual Firestore logic
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            // Simulate success
+        
+        // Get current user ID
+        guard let userId = Auth.auth().currentUser?.uid else {
+            errorMessage = "You must be logged in to create a group"
             isCreating = false
-            dismiss()
+            return
         }
-
-        // If there’s an error:
-        // self.errorMessage = "Failed to create group."
-        // self.isCreating = false
+        
+        // Firestore reference
+        let db = Firestore.firestore()
+        let groupsCollection = db.collection("groups")
+        
+        // Check if group code is already taken
+        groupsCollection.whereField("code", isEqualTo: groupCode).getDocuments { snapshot, error in
+            if let error = error {
+                errorMessage = "Error checking group code: \(error.localizedDescription)"
+                isCreating = false
+                return
+            }
+            
+            guard snapshot?.documents.isEmpty == true else {
+                errorMessage = "This group code is already taken"
+                isCreating = false
+                return
+            }
+            
+            // Create the group document
+            let groupData: [String: Any] = [
+                "name": groupName,
+                "description": groupDescription,
+                "code": groupCode,
+                "createdAt": Timestamp(date: Date()),
+                "ownerId": userId,
+                "memberCount": 1
+            ]
+            
+            // Add to groups collection
+            var groupRef: DocumentReference?
+            groupRef = groupsCollection.addDocument(data: groupData) { error in
+                if let error = error {
+                    errorMessage = "Error creating group: \(error.localizedDescription)"
+                    isCreating = false
+                    return
+                }
+                
+                guard let groupId = groupRef?.documentID else {
+                    errorMessage = "Failed to get group ID"
+                    isCreating = false
+                    return
+                }
+                
+                // Add to user's groups subcollection
+                let userGroupRef = db.collection("users").document(userId)
+                    .collection("groups").document(groupId)
+                
+                let userGroupData: [String: Any] = [
+                    "groupId": groupId,
+                    "joinedAt": Timestamp(date: Date()),
+                    "role": "admin" // Creator is admin
+                ]
+                
+                userGroupRef.setData(userGroupData) { error in
+                    isCreating = false
+                    
+                    if let error = error {
+                        errorMessage = "Error adding group to user: \(error.localizedDescription)"
+                        // Rollback group creation if user update fails
+                        groupRef?.delete()
+                        return
+                    }
+                    
+                    // Success - dismiss the view
+                    dismiss()
+                }
+            }
+        }
     }
 }

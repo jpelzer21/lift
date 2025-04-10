@@ -6,6 +6,7 @@ class UserViewModel: ObservableObject {
     
     // Template Info
     @Published var templates: [WorkoutTemplate] = []
+    @Published var groups: [WorkoutGroup] = []
     @Published var isLoading = false
     
     // Basic Info
@@ -75,6 +76,7 @@ class UserViewModel: ObservableObject {
 //        fetchUserData()
         setupRealtimeListener()
         fetchTemplatesRealtime()
+        fetchUserGroups()
         fetchExercises()
         startListeningForCustomFoods()
     }
@@ -135,6 +137,7 @@ extension UserViewModel {
         self.activityLevel = data["activityLevel"] as? String ?? "Not Set"
         self.goal = data["goal"] as? String ?? "Not Set"
         self.profileURL = data["profileURL"] as? String ?? ""
+        self.groups = data["groups"] as? [WorkoutGroup] ?? []
         
         if let dobTimestamp = data["dob"] as? Timestamp {
             self.dob = dobTimestamp.dateValue()
@@ -566,7 +569,85 @@ extension UserViewModel {
                 } ?? []
             }
     }
+    
+    func fetchUserGroups() {
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("User not authenticated")
+            return
+        }
+        
+        db.collection("users").document(userID).collection("groups")
+          .addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ Error fetching user's groups: \(error.localizedDescription)")
+                return
+            }
+            
+            // First get all group references from user's groups subcollection
+            let userGroups = snapshot?.documents.compactMap { doc -> (groupId: String, role: String)? in
+                let data = doc.data()
+                guard let groupId = data["groupId"] as? String else { return nil }
+                let role = data["role"] as? String ?? "member"
+                return (groupId, role)
+            } ?? []
+            
+            // If no groups found, clear existing data and return
+            guard !userGroups.isEmpty else {
+                self.groups = []
+                return
+            }
+            
+            // Fetch the actual group documents in batch
+            let groupIds = userGroups.map { $0.groupId }
+            db.collection("groups").whereField(FieldPath.documentID(), in: groupIds)
+              .getDocuments(source: .default) { [weak self] (snapshot, error) in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ Error fetching group details: \(error.localizedDescription)")
+                    return
+                }
+                
+                // Map to our WorkoutGroup model
+                self.groups = snapshot?.documents.compactMap { doc -> WorkoutGroup? in
+                    let data = doc.data()
+                    let groupId = doc.documentID
+                    
+                    // Find the user's role in this group
+                    let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
+                    
+                    let name = data["name"] as? String ?? "Unnamed Group"
+                    let description = data["description"] as? String ?? ""
+                    let memberCount = data["memberCount"] as? Int ?? 1
+                    let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                    
+                    return WorkoutGroup(id: groupId,
+                                        name: name,
+                                        description: description,
+                                        memberCount: memberCount,
+                                        createdAt: createdAt,
+                                        isAdmin: userID == "admin",
+                                        templates: []
+                                        )
+//                        id: groupId,
+//                        name: name,
+//                        description: description,
+//                        memberCount: memberCount,
+//                        createdAt: createdAt,
+//                        isAdmin: userRole == "admin",
+//                        templates: [] // Templates would be fetched separately if needed
+//                    )
+                } ?? []
+            }
+        }
+    }
+    
 }
+
+
+
 
 
 

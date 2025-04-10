@@ -1,16 +1,21 @@
 import SwiftUI
-import FirebaseFirestore
-import FirebaseAuth
+//import FirebaseFirestore
+//import FirebaseAuth
  
 struct HomePageView: View {
     @Environment(\.colorScheme) var colorScheme
-//    @StateObject private var viewModel = HomePageViewModel()
     @EnvironmentObject private var viewModel: UserViewModel
     
     @State private var showWorkoutView = false
     @State private var selectedExercises: [Exercise] = []
     @State private var selectedWorkoutTitle: String = "Empty Workout"
     @State private var showDeleteButton = false
+    
+    @State private var showJoinGroup = false
+    @State private var showCreateGroup = false
+    @State private var showGroupDetail = false
+    
+    @State private var selectedGroup: WorkoutGroup?
     
     
     var body: some View {
@@ -55,12 +60,15 @@ struct HomePageView: View {
                         selectedExercises = []
                         showWorkoutView.toggle()
                     } label: {
-                        Image(systemName: "plus")
-                            .imageScale(.large)
-                            .frame(width: 10, height: 10)
-                            .foregroundColor(.pink)
-                            .padding()
-                            .shadow(radius: 5)
+                        HStack {
+                            Image(systemName: "plus.circle")
+                            Text("New Template")
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.pink.opacity(0.1))
+                        .cornerRadius(10)
                     }
                 }
                 .padding(.trailing, 20)
@@ -89,6 +97,7 @@ struct HomePageView: View {
 
                             Spacer()
                         }
+                        .frame(maxHeight: 150)
                         .multilineTextAlignment(.center)
                         .padding()
                     } else {
@@ -115,30 +124,65 @@ struct HomePageView: View {
                         }
                     }
                     
-                    Text("Example Templates:")
-                        .font(.title2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 20)
-                        .padding(.top, 20)
-                    ScrollView (.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10){
-                            ForEach(ExampleTemplates.templates) { template in
-                                TemplateCard(
-                                    templateName: template.name,
-                                    exercises: template.exercises,
-                                    showDeleteButton: false,
-                                    onTap: {
-                                        selectedWorkoutTitle = template.name
-                                        selectedExercises = template.exercises
-                                        showWorkoutView.toggle()
-                                    },
-                                    onDelete: {}
-                                )
-                                .transition(.opacity) // Fade animation
-//                                .animation(.easeInOut(duration: 0.3), value: template)
+                    
+                    // ----------------------------------------------------------------------------------------------------
+                    
+                    HStack {
+                        Text("My Groups:")
+                            .font(.title2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, 20)
+
+                        Button {
+                            showJoinGroup = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.badge.plus")
+                                Text("Join")
                             }
-                        }.padding(.leading, 20).padding(.vertical, 10)
+                            .font(.subheadline)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.pink.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+
+                        Button {
+                            showCreateGroup = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                Text("Create")
+                            }
+                            .font(.subheadline)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.pink.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        .padding(.trailing, 20)
                     }
+                    .padding(.top, 10)
+
+                
+                    TabView {
+                        ForEach(viewModel.groups, id: \.id) { group in
+                            GroupCard(name: group.name)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    print("Tapped on group: \(group.name)")
+                                    selectedGroup = group
+                                    showGroupDetail = true
+                                }
+                        }
+                    }
+                    .tabViewStyle(PageTabViewStyle())
+                    
+                    
+                    // ----------------------------------------------------------------------------------------------------
+                    
+                    
+                    
                     Spacer()
                 }
                 Spacer()
@@ -150,22 +194,33 @@ struct HomePageView: View {
         }) {
             WorkoutView(workoutTitle: $selectedWorkoutTitle, exercises: $selectedExercises)
         }
+        .sheet(isPresented: $showJoinGroup) {
+            JoinGroupView()
+        }
+        .sheet(isPresented: $showCreateGroup) {
+            CreateGroupView()
+        }
+        .sheet(item: $selectedGroup) {_ in
+            if let group = selectedGroup {
+                GroupDetailView(group: group)
+            }
+        }
     }
     
 }
  
  struct WorkoutTemplate: Identifiable {
-     let id: String // Same as Firestore document ID
+     let id: String // Firestore document ID
      let name: String
-     let exercises: [Exercise] // Store only exercise names for now
+     let exercises: [Exercise]
  }
- 
  
  extension View {
      func homeButtonStyle() -> some View {
          self.modifier(HomeButtonStyle())
      }
  }
+
  
  
  //
@@ -175,6 +230,35 @@ struct HomePageView: View {
  //    }
  //}
 
+
+//struct ExampleExercises: View {
+//    var body: some View {
+//        Text("Example Templates:")
+//            .font(.title2)
+//            .frame(maxWidth: .infinity, alignment: .leading)
+//            .padding(.leading, 20)
+//            .padding(.top, 20)
+//        ScrollView (.horizontal, showsIndicators: false) {
+//            HStack(spacing: 10){
+//                ForEach(ExampleTemplates.templates) { template in
+//                    TemplateCard(
+//                        templateName: template.name,
+//                        exercises: template.exercises,
+//                        showDeleteButton: false,
+//                        onTap: {
+//                            selectedWorkoutTitle = template.name
+//                            selectedExercises = template.exercises
+//                            showWorkoutView.toggle()
+//                        },
+//                        onDelete: {}
+//                    )
+//                    .transition(.opacity) // Fade animation
+////                                .animation(.easeInOut(duration: 0.3), value: template)
+//                }
+//            }.padding(.leading, 20).padding(.vertical, 10)
+//        }
+//    }
+//}
 
 
 
