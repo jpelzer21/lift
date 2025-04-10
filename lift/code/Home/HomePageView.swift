@@ -145,7 +145,9 @@ struct HomePageView: View {
             }
 //        }
         .navigationTitle("Home")
-        .fullScreenCover(isPresented: $showWorkoutView) {
+        .fullScreenCover(isPresented: $showWorkoutView, onDismiss: {
+            viewModel.fetchTemplatesRealtime()
+        }) {
             WorkoutView(workoutTitle: $selectedWorkoutTitle, exercises: $selectedExercises)
         }
     }
