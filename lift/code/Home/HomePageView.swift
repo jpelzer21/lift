@@ -135,7 +135,7 @@ struct HomePageView: View {
                                     onDelete: {}
                                 )
                                 .transition(.opacity) // Fade animation
-                    //                            .animation(.easeInOut(duration: 0.3), value: template)
+//                                .animation(.easeInOut(duration: 0.3), value: template)
                             }
                         }.padding(.leading, 20).padding(.vertical, 10)
                     }
@@ -143,14 +143,10 @@ struct HomePageView: View {
                 }
                 Spacer()
             }
-            
 //        }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView) {
             WorkoutView(workoutTitle: $selectedWorkoutTitle, exercises: $selectedExercises)
-        }
-        .refreshable {
-            viewModel.fetchTemplatesRealtime()
         }
     }
     

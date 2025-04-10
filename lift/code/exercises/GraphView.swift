@@ -11,6 +11,8 @@ struct GraphView: View {
     @State private var showInfo = false
     @State private var showEditExerciseView = false
     @State private var showFirstSets: Bool = true
+    
+    @State private var barType: String = ""
 
     let exerciseName: String // name passed through
     
@@ -248,9 +250,27 @@ struct GraphView: View {
         let db = Firestore.firestore()
         let exerciseRef = db.collection("users").document(userID)
             .collection("exercises").document(name.lowercased().replacingOccurrences(of: " ", with: "_"))
-            .collection("sets")
-
-        exerciseRef.order(by: "date").getDocuments { snapshot, error in
+            
+        exerciseRef.getDocument { docSnapshot, error in
+            if let error = error {
+                print("Error getting document: \(error)")
+                return
+            }
+            guard let document = docSnapshot, document.exists else {
+                print("Document does not exist")
+                return
+            }
+            if let barType = document.data()?["barType"] as? String {
+                self.barType = barType
+                if barType == "BodyWeight" {
+                    self.selectedMetric = .reps
+                }
+            } else {
+                print("barType field is missing or not a String")
+            }
+        }
+        
+        exerciseRef.collection("sets").order(by: "date").getDocuments { snapshot, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 if let error = error {
