@@ -65,7 +65,7 @@ struct GroupDetailView: View {
                             .foregroundColor(.pink)
                     }
                     .sheet(isPresented: $showMembersView) {
-                        GroupMembersView(members: group.members)
+                        GroupMembersView(groupId: group.id, members: group.members)
                     }
                     Spacer()
                     Label("Created: \(formattedDate(group.createdAt))", systemImage: "calendar")
@@ -77,8 +77,8 @@ struct GroupDetailView: View {
                 
                 HStack {
                     // Templates Section
-                    Text("Templates")
-                        .font(.title2)
+                    Text("Templates:")
+                        .font(.headline)
                         .fontWeight(.semibold)
                     Spacer()
                     if isAdmin {

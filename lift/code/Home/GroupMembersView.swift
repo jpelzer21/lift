@@ -7,11 +7,22 @@
 
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct GroupMembersView: View {
+    let groupId: String
     @State var members: [Member]
+    
     @Environment(\.dismiss) private var dismiss
-
+    @State private var showConfirmation = false
+    @State private var memberToRemove: Member?
+    
+    private var isAdmin: Bool {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return false }
+        return members.first(where: { $0.id == currentUserId })?.role == "admin"
+    }
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -40,32 +51,62 @@ struct GroupMembersView: View {
                                 .font(.headline)
                            
                         }
-                        
                         Spacer()
-                        
-//                        Text("Joined: \(formattedDate(member.joinedAt))")
-//                            .font(.caption)
-//                            .foregroundColor(.gray)
+
+                        if isAdmin && member.id != Auth.auth().currentUser?.uid {
+                            Button(action: {
+                                memberToRemove = member
+                                showConfirmation = true
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+                        }
                     }
-                    .padding(.vertical, 6)
                 }
-                .navigationTitle("Group Members")
-                .toolbar {
-//                    ToolbarItem(placement: .topBarLeading) {
-//                        Button("Done") {
-//                            dismiss()
-//                        }
-//                    }
-                }
+
                 Spacer()
             }
             .padding(20)
+            .navigationTitle("Group Members")
+            .confirmationDialog("Remove this member?", isPresented: $showConfirmation, titleVisibility: .visible) {
+                Button("Remove", role: .destructive) {
+                    if let member = memberToRemove {
+                        removeMember(member)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         }
     }
 
-    private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
+    private func removeMember(_ member: Member) {
+        let db = Firestore.firestore()
+        
+        // Remove member from group's subcollection
+        db.collection("groups").document(groupId).collection("members").document(member.id).delete { error in
+            if let error = error {
+                print("Failed to remove member from group: \(error)")
+                return
+            }
+            
+            // Remove group reference from user's collection
+            db.collection("users").document(member.id).collection("groups").document(groupId).delete { error in
+                if let error = error {
+                    print("Failed to remove group reference from user: \(error)")
+                }
+            }
+            
+            // Update local state
+            members.removeAll { $0.id == member.id }
+        }
     }
 }
+
+
+
+
+
+
+
+
