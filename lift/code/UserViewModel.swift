@@ -584,7 +584,6 @@ extension UserViewModel {
                     return
                 }
                 
-                // Get user group references
                 let userGroups = snapshot?.documents.compactMap { doc -> (groupId: String, role: String)? in
                     let data = doc.data()
                     guard let groupId = data["groupId"] as? String else { return nil }
@@ -601,7 +600,7 @@ extension UserViewModel {
                 
                 self.db.collection("groups")
                     .whereField(FieldPath.documentID(), in: groupIds)
-                    .getDocuments(source: .default) { [weak self] snapshot, error in
+                    .getDocuments { [weak self] snapshot, error in
                         guard let self = self else { return }
 
                         if let error = error {
@@ -609,13 +608,15 @@ extension UserViewModel {
                             return
                         }
 
-                        let fetchedGroups = snapshot?.documents.compactMap { doc -> WorkoutGroup? in
+                        var fetchedGroups: [WorkoutGroup] = []
+
+                        let dispatchGroup = DispatchGroup()
+
+                        snapshot?.documents.forEach { doc in
                             let data = doc.data()
                             let groupId = doc.documentID
-                            
-                            // Match with user's role
-                            let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
 
+                            let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
                             let name = data["name"] as? String ?? "Unnamed Group"
                             let description = data["description"] as? String ?? ""
                             let memberCount = data["memberCount"] as? Int ?? 1
@@ -628,21 +629,82 @@ extension UserViewModel {
                                 memberCount: memberCount,
                                 createdAt: createdAt,
                                 isAdmin: userRole == "admin",
-                                templates: []
+                                templates: [],
+                                members: []
                             )
 
-                            // Fetch templates for each group
+                            dispatchGroup.enter()
                             self.fetchGroupTemplates(for: groupId) { templates in
                                 workoutGroup.templates = templates
+                                dispatchGroup.leave()
                             }
-                            
-                            return workoutGroup
-                        } ?? []
-                        
-                        self.groups = fetchedGroups
+
+                            dispatchGroup.enter()
+                            self.fetchGroupMembers(groupId: groupId) { members in
+                                workoutGroup.members = members
+                                fetchedGroups.append(workoutGroup)
+                                dispatchGroup.leave()
+                            }
+                        }
+
+                        dispatchGroup.notify(queue: .main) {
+                            self.groups = fetchedGroups
+                        }
                     }
             }
     }
+    
+    func fetchGroupMembers(groupId: String, completion: @escaping ([Member]) -> Void) {
+        let groupMembersRef = db.collection("groups").document(groupId).collection("members")
+        
+        groupMembersRef.getDocuments { [weak self] snapshot, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                print("❌ Error fetching members for group \(groupId): \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            let memberDocs = snapshot?.documents ?? []
+            var members: [Member] = []
+            let dispatchGroup = DispatchGroup()
+
+            for doc in memberDocs {
+                dispatchGroup.enter()
+                
+                let userId = doc.documentID
+                let role = doc.data()["role"] as? String ?? "member" // Get role from group membership
+                
+                self.db.collection("users").document(userId).getDocument { userSnapshot, error in
+                    defer { dispatchGroup.leave() }
+
+                    guard let userData = userSnapshot?.data(), error == nil else {
+                        print("⚠️ Error fetching user \(userId): \(error?.localizedDescription ?? "Unknown error")")
+                        return
+                    }
+
+                    let name = userData["name"] as? String ?? "Unknown"
+                    let profileURLString = userData["profileURL"] as? String ?? ""
+                    let profileURL = URL(string: profileURLString)
+
+                    let member = Member(
+                        id: userId,
+                        name: name,
+                        profileURL: profileURL,
+                        role: role 
+                    )
+
+                    members.append(member)
+                }
+            }
+
+            dispatchGroup.notify(queue: .main) {
+                completion(members)
+            }
+        }
+    }
+    
 
     func fetchGroupTemplates(for groupId: String, completion: @escaping ([WorkoutTemplate]) -> Void) {
         db.collection("groups").document(groupId).collection("templates")
@@ -735,7 +797,6 @@ extension UserViewModel {
         } else {
             bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
         }
-        print(bmr)
         let activityMultiplier: Double = {
             switch activityLevel.lowercased() {
                 case "sedentary": return 1
@@ -753,7 +814,6 @@ extension UserViewModel {
             case "gain muscle": tdee += 300
             default: break
         }
-        print(tdee)
         // Update goal variables
         goalCalories = Int(tdee)
         goalProtein = Int((Double(weight) ?? 160)*1)

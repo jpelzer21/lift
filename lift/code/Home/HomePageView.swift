@@ -167,7 +167,7 @@ struct HomePageView: View {
                 
                     TabView {
                         ForEach(viewModel.groups) { group in
-                            GroupCard(name: group.name)
+                            GroupCard(group: group, isAdmin: group.isAdmin)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     print("Tapped on group: \(group.name)")
@@ -257,6 +257,3 @@ struct HomePageView: View {
 //        }
 //    }
 //}
-
-
-

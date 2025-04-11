@@ -194,7 +194,7 @@ struct EditProfileView: View {
         var base64String: String? = nil
         
         if let image = profileImage,
-           let imageData = image.jpegData(compressionQuality: 0.1) {
+           let imageData = image.jpegData(compressionQuality: 0.01) {
             base64String = imageData.base64EncodedString()
         }
 

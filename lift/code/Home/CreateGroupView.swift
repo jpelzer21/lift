@@ -95,14 +95,12 @@ struct CreateGroupView: View {
         isCreating = true
         errorMessage = nil
         
-        // Get current user ID
         guard let userId = Auth.auth().currentUser?.uid else {
             errorMessage = "You must be logged in to create a group"
             isCreating = false
             return
         }
         
-        // Firestore reference
         let db = Firestore.firestore()
         let groupsCollection = db.collection("groups")
         
@@ -130,7 +128,6 @@ struct CreateGroupView: View {
                 "memberCount": 1
             ]
             
-            // Add to groups collection
             var groupRef: DocumentReference?
             groupRef = groupsCollection.addDocument(data: groupData) { error in
                 if let error = error {
@@ -145,27 +142,41 @@ struct CreateGroupView: View {
                     return
                 }
                 
+                let joinedAt = Timestamp(date: Date())
+
                 // Add to user's groups subcollection
                 let userGroupRef = db.collection("users").document(userId)
                     .collection("groups").document(groupId)
                 
                 let userGroupData: [String: Any] = [
                     "groupId": groupId,
-                    "joinedAt": Timestamp(date: Date()),
-                    "role": "admin" // Creator is admin
+                    "joinedAt": joinedAt,
+                    "role": "admin"
                 ]
                 
-                userGroupRef.setData(userGroupData) { error in
+                // Add to group's members subcollection
+                let groupMemberRef = db.collection("groups").document(groupId)
+                    .collection("members").document(userId)
+                
+                let groupMemberData: [String: Any] = [
+                    "userId": userId,
+                    "joinedAt": joinedAt,
+                    "role": "admin"
+                ]
+                
+                let batch = db.batch()
+                batch.setData(userGroupData, forDocument: userGroupRef)
+                batch.setData(groupMemberData, forDocument: groupMemberRef)
+                
+                batch.commit { error in
                     isCreating = false
                     
                     if let error = error {
-                        errorMessage = "Error adding group to user: \(error.localizedDescription)"
-                        // Rollback group creation if user update fails
-                        groupRef?.delete()
+                        errorMessage = "Error setting group membership: \(error.localizedDescription)"
+                        groupRef?.delete() // rollback
                         return
                     }
                     
-                    // Success - dismiss the view
                     dismiss()
                 }
             }

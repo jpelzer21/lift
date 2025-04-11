@@ -1,50 +1,65 @@
+//
+//  GroupMembersView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/10/25.
+//
+
+
 import SwiftUI
 
 struct GroupMembersView: View {
-    let members: [Member]
+    @State var members: [Member]
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationView {
-            List(members) { member in
-                HStack(spacing: 16) {
-                    AsyncImage(url: URL(string: member.profileURL)) { phase in
-                        if let image = phase.image {
-                            image.resizable()
-                        } else if phase.error != nil {
-                            Image(systemName: "person.crop.circle.badge.exclamationmark")
+            VStack {
+                ForEach($members) { $member in
+                    HStack(spacing: 16) {
+                        if let profileURL = member.profileURL,
+                           let base64String = profileURL.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                           !base64String.isEmpty,
+                           let imageData = Data(base64Encoded: base64String),
+                           let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
                                 .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 50, height: 50)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 1))
                         } else {
-                            ProgressView()
+                            Image(systemName: "person.crop.circle.fill")
+                                .resizable()
+                                .frame(width: 50, height: 50)
+                                .foregroundColor(.gray)
                         }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(member.name)
+                                .font(.headline)
+                           
+                        }
+                        
+                        Spacer()
+                        
+//                        Text("Joined: \(formattedDate(member.joinedAt))")
+//                            .font(.caption)
+//                            .foregroundColor(.gray)
                     }
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(member.name)
-                            .font(.headline)
-                        Text(member.role.capitalized)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text("Joined: \(formattedDate(member.joinedAt))")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    .padding(.vertical, 6)
                 }
-                .padding(.vertical, 6)
-            }
-            .navigationTitle("Group Members")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                .navigationTitle("Group Members")
+                .toolbar {
+//                    ToolbarItem(placement: .topBarLeading) {
+//                        Button("Done") {
+//                            dismiss()
+//                        }
+//                    }
                 }
+                Spacer()
             }
+            .padding(20)
         }
     }
 

@@ -21,56 +21,73 @@ struct GroupDetailView: View {
     @State private var selectedWorkoutTitle: String = "Empty Workout"
     @State private var showWorkoutView = false
     @State private var showTemplatePicker = false
+    @State private var showMembersView = false
+    
+    private var isAdmin: Bool {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return false }
+            if let member = group.members.first(where: { $0.id == currentUserId }) {
+                return member.role == "admin"
+            }
+            return false
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-
-                // Group Name
-                Text(group.name)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
                 
-                // Description
-                Text(group.description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Group Name
+                        Text(group.name)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                        
+                        // Description
+                        Text(group.description)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if isAdmin {
+                        AdminBadge()
+                    }
+                }
                 
                 // Info Section
                 HStack {
                     Button(action: {
-                        print(group.memberCount)
+                        showMembersView = true
                     }) {
-                        Label("\(group.memberCount) members", systemImage: "person.3.fill")
+                        Label("\(group.members.count) members", systemImage: "person.3.fill")
                             .font(.subheadline)
                             .foregroundColor(.pink)
+                    }
+                    .sheet(isPresented: $showMembersView) {
+                        GroupMembersView(members: group.members)
                     }
                     Spacer()
                     Label("Created: \(formattedDate(group.createdAt))", systemImage: "calendar")
                 }
                 .font(.subheadline)
                 .foregroundColor(.gray)
-
-                if group.isAdmin {
-                    Text("You are an admin of this group")
-                        .font(.footnote)
-                        .foregroundColor(.green)
-                        .padding(.top, 4)
-                }
                 
                 Divider()
                 
                 HStack {
                     // Templates Section
-                    Text("Workout Templates")
+                    Text("Templates")
                         .font(.title2)
                         .fontWeight(.semibold)
                     Spacer()
-                    Button(action: {
-                        showTemplatePicker = true
-                    }) {
-                        Label("Add Templates", systemImage: "plus")
-                            .font(.headline)
+                    if isAdmin {
+                        Button(action: {
+                            showTemplatePicker = true
+                        }) {
+                            Label("Add Templates", systemImage: "plus")
+                                .font(.headline)
+                        }
                     }
                 }
                 
@@ -83,13 +100,17 @@ struct GroupDetailView: View {
                         ForEach(groupTemplates, id: \.id) {template in
                             TemplateCard(templateName: template.name,
                                          exercises: template.exercises,
-                                         showDeleteButton: false,
+                                         showDeleteButton: isAdmin,
                                          onTap: {
                                 selectedWorkoutTitle = template.name
                                 selectedExercises = template.exercises
                                 showWorkoutView.toggle()
                             },
-                            onDelete: {})
+                             onDelete: {
+                                 if isAdmin {
+                                     deleteTemplate(template)
+                                 }
+                             })
                         }
                     }
                 }
@@ -218,9 +239,20 @@ struct GroupDetailView: View {
                 print("Successfully loaded \(self.groupTemplates.count) templates")
             }
     }
+    
+    private func deleteTemplate(_ template: WorkoutTemplate) {
+        let db = Firestore.firestore()
+        db.collection("groups").document(group.id).collection("templates").document(template.id).delete { error in
+            if let error = error {
+                print("Error deleting template: \(error)")
+            } else {
+                // Remove the template from the local array
+                groupTemplates.removeAll { $0.id == template.id }
+            }
+        }
+    }
 
-    // MARK: - Improved Add Template Method
-
+    
     private func addTemplateToGroup(_ template: WorkoutTemplate) {
         guard let userId = Auth.auth().currentUser?.uid else {
             print("Error: User not logged in.")

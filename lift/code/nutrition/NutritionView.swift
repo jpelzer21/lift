@@ -125,7 +125,6 @@ struct NutritionView: View {
                 selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
-//                print(calorieGoal)
             }
             
             if isPopupPresented, let index = foodsEaten.firstIndex(where: { $0.id == selectedFood?.id }) {
