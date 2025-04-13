@@ -22,9 +22,6 @@ struct CreateGroupView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-//                Text("Create a New Group")
-//                    .font(.title2)
-//                    .fontWeight(.semibold)
 
                 TextField("Group Name", text: $groupName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())

@@ -100,7 +100,6 @@ struct NutritionView: View {
                             .onTapGesture {
                                 selectedFood = food
                                 print(food.servings)
-//                                servings = 1
                                 isPopupPresented = true
                             }
                         }
@@ -285,7 +284,6 @@ struct Page3: View {
             // **Other Macros Section**
             HStack(spacing: 15) {
                 ProgressLineView(value: $dailyProtein, total: $proteinGoal, label: "Protein")
-//                RatioProgressView(carbs: $dailyCarbs, fats: $dailyFats, maxValue: 200)
                 ProgressLineView(value: $dailyCarbs, total: $carbsGoal, label: "Carbs")
                 ProgressLineView(value: $dailyFats, total: $fatsGoal, label: "Fats")
             }
@@ -317,9 +315,8 @@ struct ProgressLineView: View {
                     .foregroundColor(Color.gray.opacity(0.3))
                 
                 RoundedRectangle(cornerRadius: 10)
-                    .frame(width: max(progress * 100, 0), height: 10) // Match parent width
+                    .frame(width: max(progress * 100, 0), height: 10)
                     .foregroundStyle(progress < 1 ? .pink : .green)
-//                    .foregroundStyle(LinearGradient(colors: [.red, .yellow, .green], startPoint: .leading, endPoint: .trailing))
             }
             .frame(width: 100)
             Text("\(Int(value))/\(Int(total))g")

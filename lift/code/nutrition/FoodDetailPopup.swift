@@ -53,25 +53,25 @@ struct FoodDetailPopup: View {
                         Text("Protein:")
                             .fontWeight(.bold)
                         Spacer()
-                        Text("\(String(format: "%.0f", (foodItem.protein ?? 0) * Double(foodItem.servings))) cal")
+                        Text("\(String(format: "%.0f", (foodItem.protein ?? 0) * Double(foodItem.servings))) g")
                     }
                     HStack {
                         Text("Fats:")
                             .fontWeight(.bold)
                         Spacer()
-                        Text("\(String(format: "%.0f", (foodItem.fats ?? 0) * Double(foodItem.servings))) cal")
+                        Text("\(String(format: "%.0f", (foodItem.fats ?? 0) * Double(foodItem.servings))) g")
                     }
                     HStack {
                         Text("Carbs:")
                             .fontWeight(.bold)
                         Spacer()
-                        Text("\(String(format: "%.0f", (foodItem.carbs ?? 0) * Double(foodItem.servings))) cal")
+                        Text("\(String(format: "%.0f", (foodItem.carbs ?? 0) * Double(foodItem.servings))) g")
                     }
                     HStack {
                         Text("Sugars:")
                             .fontWeight(.bold)
                         Spacer()
-                        Text("\(String(format: "%.0f", (foodItem.sugars ?? 0) * Double(foodItem.servings))) cal")
+                        Text("\(String(format: "%.0f", (foodItem.sugars ?? 0) * Double(foodItem.servings))) g")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,8 +172,6 @@ struct FoodDetailPopup: View {
             .shadow(radius: 10)
         }
         .transition(.move(edge: .bottom))
-//        .animation(.spring(), value: isPresented)
-//        .frame(width: UIScreen.main.bounds.width * 0.85, height: UIScreen.main.bounds.height * 0.75)
         .onAppear {
             currentServings = foodItem.servings
         }

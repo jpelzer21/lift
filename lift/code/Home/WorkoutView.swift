@@ -12,6 +12,7 @@ struct WorkoutView: View {
     @State private var isLoading = false
     @State private var error: Error?
     @State private var showingAlert = false
+    @State private var showingFinishWorkout = false
     @State private var showingErrorAlert: Bool = false
     @State private var isEditingTitle: Bool = false
     @State private var showToast = false
@@ -23,172 +24,191 @@ struct WorkoutView: View {
     private let db = Firestore.firestore()
     
     var body: some View {
-        NavigationView {
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    VStack(alignment: .center) {
-                        if isEditingTitle {
-                            TextField("Enter Title:", text: $workoutTitle, onCommit: {
-                                if !workoutTitle.trimmingCharacters(in: .whitespaces).isEmpty {
-                                    isEditingTitle = false
-                                }
-                            })
-                            .font(.largeTitle)
-                            .fontWeight(.medium)
-                            .customTextFieldStyle()
-                        } else {
-                            Text(workoutTitle)
+        ZStack {
+            NavigationView {
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(alignment: .center) {
+                            if isEditingTitle {
+                                TextField("Enter Title:", text: $workoutTitle, onCommit: {
+                                    if !workoutTitle.trimmingCharacters(in: .whitespaces).isEmpty {
+                                        isEditingTitle = false
+                                    }
+                                })
                                 .font(.largeTitle)
                                 .fontWeight(.medium)
-                                .onTapGesture {
-                                    isEditingTitle = true
-                                }
-                        }
-                        
-                        VStack {
-                            ForEach(exercises.indices, id: \.self) { index in
-                                if isReordering {
-                                    if dragOverIndex == index {
-                                        // Highlight the space between exercises
-                                        Rectangle()
-                                            .fill(Color.blue.opacity(0.5))
-                                            .frame(height: 8)
-                                            .transition(.opacity)
+                                .customTextFieldStyle()
+                            } else {
+                                Text(workoutTitle)
+                                    .font(.largeTitle)
+                                    .fontWeight(.medium)
+                                    .onTapGesture {
+                                        isEditingTitle = true
                                     }
-                                    
-                                    Text(exercises[index].name)
-                                        .font(.headline)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.gray.opacity(0.2))
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        .onDrag {
-                                            self.draggedExercise = exercises[index]
-                                            return NSItemProvider(object: exercises[index].name as NSString)
+                            }
+                            
+                            VStack {
+                                ForEach(exercises.indices, id: \.self) { index in
+                                    if isReordering {
+                                        if dragOverIndex == index {
+                                            // Highlight the space between exercises
+                                            Rectangle()
+                                                .fill(Color.blue.opacity(0.5))
+                                                .frame(height: 8)
+                                                .transition(.opacity)
                                         }
-                                        .onDrop(of: [.plainText], delegate: ExerciseDropDelegate(
-                                            targetIndex: index,
-                                            exercises: $exercises,
-                                            draggedExercise: $draggedExercise,
-                                            dragOverIndex: $dragOverIndex
-                                        ))
-                                } else {
-                                    ExerciseView(exercise: Binding(
-                                        get: { exercises[index] },
-                                        set: { newExercise in
-                                            exercises[index] = newExercise
-                                        }
-                                    ), deleteAction: {
-                                        exercises.remove(at: index)
-                                    })
-                                    .onLongPressGesture {
-                                        withAnimation {
-                                            isReordering = true
+                                        
+                                        Text(exercises[index].name)
+                                            .font(.headline)
+                                            .padding()
+                                            .frame(maxWidth: .infinity)
+                                            .background(Color.gray.opacity(0.2))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .onDrag {
+                                                self.draggedExercise = exercises[index]
+                                                return NSItemProvider(object: exercises[index].name as NSString)
+                                            }
+                                            .onDrop(of: [.plainText], delegate: ExerciseDropDelegate(
+                                                targetIndex: index,
+                                                exercises: $exercises,
+                                                draggedExercise: $draggedExercise,
+                                                dragOverIndex: $dragOverIndex
+                                            ))
+                                    } else {
+                                        ExerciseView(exercise: Binding(
+                                            get: { exercises[index] },
+                                            set: { newExercise in
+                                                exercises[index] = newExercise
+                                            }
+                                        ), deleteAction: {
+                                            exercises.remove(at: index)
+                                        })
+                                        .onLongPressGesture {
+                                            withAnimation {
+                                                isReordering = true
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if !isReordering {
-                            HStack {
-                                Spacer()
-                                Button("Add Exercise") {
-                                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                                    generator.impactOccurred()
-                                    
-                                    // Add the new exercise and get its index
-                                    let newIndex = exercises.count
-                                    exercises.append(Exercise(name: "New Exercise", sets: [
-                                        ExerciseSet(number: 1, weight: 0, reps: 0)
-                                    ]))
-                                    
-                                    // Scroll to the new exercise after a tiny delay
-                                    DispatchQueue.main.async {
-                                        withAnimation {
-                                            scrollProxy.scrollTo(newIndex, anchor: .bottom)
+                            if !isReordering {
+                                HStack {
+                                    Spacer()
+                                    Button("Add Exercise") {
+                                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                                        generator.impactOccurred()
+                                        
+                                        // Add the new exercise and get its index
+                                        let newIndex = exercises.count
+                                        exercises.append(Exercise(name: "New Exercise", sets: [
+                                            ExerciseSet(number: 1, weight: 0, reps: 0)
+                                        ]))
+                                        
+                                        // Scroll to the new exercise after a tiny delay
+                                        DispatchQueue.main.async {
+                                            withAnimation {
+                                                scrollProxy.scrollTo(newIndex, anchor: .bottom)
+                                            }
                                         }
                                     }
+                                    .buttonStyle(.borderedProminent)
+                                    .buttonBorderShape(.roundedRectangle)
+                                    .tint(.blue)
+                                    .saturation(0.9)
+                                    .padding()
+                                    Button("Save Template") {
+                                        saveWorkoutAsTemplate()
+                                    }
+                                    Spacer()
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .buttonBorderShape(.roundedRectangle)
-                                .tint(.blue)
-                                .saturation(0.9)
+                                .listRowBackground(Color(UIColor.systemBackground))
+                                .listRowSeparator(.hidden)
+                            } else {
+                                Button("Done") {
+                                    withAnimation {
+                                        isReordering.toggle()
+                                    }
+                                }
                                 .padding()
-                                Button("Save Template") {
-                                    saveWorkoutAsTemplate()
-                                }
-                                Spacer()
+                                .background(isReordering ? Color.green.opacity(0.3) : Color.clear)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-                            .listRowBackground(Color(UIColor.systemBackground))
-                            .listRowSeparator(.hidden)
-                        } else {
-                            Button("Done") {
-                                withAnimation {
-                                    isReordering.toggle()
-                                }
+                            
+                            
+                        }
+                        .onAppear {
+                            if workoutTitle == "New Template" || workoutTitle == "New Workout" {
+                                isEditingTitle = true
                             }
-                            .padding()
-                            .background(isReordering ? Color.green.opacity(0.3) : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            loadWorkoutTemplate()
                         }
-                        
-                        
+                        .ignoresSafeArea(.all)
                     }
-                    .onAppear {
-                        if workoutTitle == "New Template" || workoutTitle == "New Workout" {
-                            isEditingTitle = true
-                        }
-                        loadWorkoutTemplate()
-                    }
-                    .ignoresSafeArea(.all)
+                    .overlay(
+                        toastMessage()
+                            .opacity(showToast ? 1 : 0) // Show when needed
+                            .animation(.easeInOut(duration: 0.3), value: showToast)
+                    )
                 }
-                .overlay(
-                    toastMessage()
-                        .opacity(showToast ? 1 : 0) // Show when needed
-                        .animation(.easeInOut(duration: 0.3), value: showToast)
-                )
+                
+                .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .toolbarBackgroundVisibility(.hidden)
+                .navigationBarItems(trailing: Button("Finish Workout") {
+                    for i in exercises.indices {
+                        let sets = exercises[i].sets
+                        exercises[i].allSetsCompleted = sets.allSatisfy { $0.isCompleted }
+                    }
+                    showingFinishWorkout = true
+                }
+                .buttonStyle(.borderedProminent).tint(.green).saturation(0.85))
+                .toolbar{
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: {
+                            presentationMode.wrappedValue.dismiss()
+                            print("workout cancelled")
+                        }) {
+                            Label("Back", systemImage: "arrow.left")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }.padding()
+            .onAppear {
+                UIApplication.shared.isIdleTimerDisabled = true
+                UserViewModel.shared.fetchUserExercises()
+            }
+            .onDisappear {
+                UIApplication.shared.isIdleTimerDisabled = false
             }
             
-            .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-            .toolbarBackgroundVisibility(.hidden)
-            .navigationBarItems(trailing: Button("Finish Workout") {
-                showingAlert = true
-            }
-            .alert(isPresented: $showingAlert) {
-                Alert(
-                    title: Text("You have completed \(completedSets()) exercises"),
-                    primaryButton: .default(Text("Finish")) {
-                        print("Workout Finished")
-                        saveWorkoutAsTemplate()
-                        saveWorkout()
-                        saveExercises()
-                        presentationMode.wrappedValue.dismiss()
-                    },
-                    secondaryButton: .cancel(Text("Stay"))
-                )
-            }
-            .buttonStyle(.borderedProminent).tint(.green).saturation(0.85))
-            .toolbar{
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                        print("workout cancelled")
-                    }) {
-                        Label("Back", systemImage: "arrow.left")
-                            .foregroundStyle(.red)
-                    }
+            
+            
+            if showingFinishWorkout {
+                ZStack {
+                    Rectangle()
+                        .background(.ultraThinMaterial)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .ignoresSafeArea(.all)
+                    FinishWorkoutView(
+                        completedExercises: exercises.filter { $0.allSetsCompleted },
+                        isPresented: $showingFinishWorkout,
+                        onSaveWorkout: {
+                            saveWorkout()
+                            saveExercises()
+                            presentationMode.wrappedValue.dismiss()
+                        },
+                        onSaveTemplate: {
+                            saveWorkoutAsTemplate()
+                        }
+                    )
                 }
             }
-        }.padding()
-        .onAppear {
-            UIApplication.shared.isIdleTimerDisabled = true
-            UserViewModel.shared.fetchUserExercises()
+            
+            
         }
-        .onDisappear {
-            UIApplication.shared.isIdleTimerDisabled = false
-        }
+        
     }
     
     private func toastMessage() -> some View {
@@ -310,12 +330,6 @@ struct ExerciseView: View {
         VStack(spacing: 10) {
             // Exercise Title and Delete Button
             HStack {
-//                TextField("Exercise Name", text: $exercise.name)
-//                    .font(.headline)
-//                    .padding(.vertical, 8)
-//                    .padding(.horizontal, 10)
-//                    .background(RoundedRectangle(cornerRadius: 10).fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6)))
-//                    .multilineTextAlignment(.leading)
                 
                 Button(action: {
                     showingExerciseSelection = true
@@ -420,12 +434,11 @@ struct ExerciseView: View {
                         .frame(width: 30)
                     }
                     .padding(.vertical, 5)
-                    .background(/*set.isCompleted ? Color("androidGreen") : */Color.clear)
+                    .background(Color.clear)
                     .saturation(0.8)
                     .cornerRadius(10)
                     .animation(.easeInOut, value: set.isCompleted)
                 }
-//                .padding(.vertical, 10)
             }
 
             HStack { // add and remove sets
@@ -458,7 +471,7 @@ struct ExerciseView: View {
                 Button(action: {
                     if !exercise.sets.isEmpty {
                         withAnimation {
-                            _ = exercise.sets.removeLast() // Explicitly discard result
+                            _ = exercise.sets.removeLast()
                         }
                     }
                 }) {
@@ -470,7 +483,7 @@ struct ExerciseView: View {
                     .font(.body)
                     .padding(.vertical, 5)
                 }
-                .disabled(exercise.sets.isEmpty) // Disable when no sets exist
+                .disabled(exercise.sets.isEmpty)
             }
             .padding(.leading, 15)
             
@@ -489,7 +502,7 @@ struct Exercise: Identifiable, Codable {
     var id = UUID()
     var name: String
     var muscleGroups: [String] = []
-    var barType: String = "Barbell"
+    var barType: String = "Other"
     var sets: [ExerciseSet] = [ExerciseSet(number: 1, weight: 0, reps: 0)]
     var createdAt: Date = Date()
     var setCount: Int = 0
@@ -515,17 +528,6 @@ extension View {
 extension View {
     func customButtonStyle() -> some View {
         self.modifier(CustomButtonStyle())
-    }
-}
-
-struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
     }
 }
 
@@ -567,3 +569,6 @@ struct ExerciseDropDelegate: DropDelegate {
         dragOverIndex = nil
     }
 }
+
+
+

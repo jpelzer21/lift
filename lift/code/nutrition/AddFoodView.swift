@@ -14,8 +14,8 @@ struct AddFoodView: View {
     @State private var isPopupPresented: Bool = false
     @State private var isFetchingData = false
     
-    @State private var scanErrorMessage: String? // Store error messages
-    @State private var isShowingScanError = false // Track error alert visibility
+    @State private var scanErrorMessage: String?
+    @State private var isShowingScanError = false
     @State private var isShowingCreateFood: Bool = false
     @State private var selectedTab = 1  // 0: Search, 1: Custom, 2: Barcode
     
@@ -200,7 +200,7 @@ struct AddFoodView: View {
             return
         }
         
-        let apiKey = "DEMO_KEY" // Replace with your actual API key
+        let apiKey = "m8AiMgvgfhUH7ADnKjLhLU7SpbBfZuZE9zur745D"
         let query = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlString = "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=\(apiKey)&query=\(query)&pageSize=30"
         
@@ -334,21 +334,6 @@ struct FoodRowView: View {
    
    var body: some View {
        HStack {
-//           if let imageUrl = food.imageUrl, let url = URL(string: imageUrl) {
-//               AsyncImage(url: url) { image in
-//                   image.resizable()
-//                       .aspectRatio(contentMode: .fit)
-//                       .frame(width: 50, height: 50)
-//                       .cornerRadius(8)
-//               } placeholder: {
-//                   ProgressView()
-//                       .frame(width: 50, height: 50)
-//               }
-//           } else {
-//               Image(systemName: "photo")
-//                   .frame(width: 50, height: 50)
-//                   .foregroundColor(.gray)
-//           }
            
            VStack(alignment: .leading, spacing: 4) {
                Text(food.name)
@@ -370,7 +355,7 @@ struct FoodRowView: View {
        
    }
 }
-// MARK: - Barcode Scanner View
+
 struct BarcodeScannerView: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var onScan: (String) -> Void

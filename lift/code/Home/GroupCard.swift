@@ -5,12 +5,11 @@
 //  Created by Josh Pelzer on 4/9/25.
 //
 
-
 import SwiftUI
 
 struct GroupCard: View {
     @Environment(\.colorScheme) var colorScheme
-    let group: WorkoutGroup  // Assuming you have a WorkoutGroup model
+    let group: WorkoutGroup
     let isAdmin: Bool
     
     var body: some View {
@@ -63,6 +62,7 @@ struct GroupCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
+        .frame(height: 150)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
@@ -146,27 +146,3 @@ struct WorkoutTemplate: Identifiable, Codable {
     let name: String
     let exercises: [Exercise]
 }
-
-
-
-//let sampleGroup = WorkoutGroup(
-//    id: "group123",
-//    name: "Morning Workout Crew",
-//    description: "Group for early risers",
-//    memberCount: 8,
-//    createdAt: Date().addingTimeInterval(-86400), // Yesterday
-//    isAdmin: true
-//)
-//
-//let sampleTemplate = WorkoutTemplate(
-//    name: "Upper Body Routine",
-//    exercises: [
-//        Exercise(
-//            name: "Bench Press",
-//            sets: [
-//                ExerciseSet(number: 1, weight: 135, reps: 10),
-//                ExerciseSet(number: 2, weight: 155, reps: 8)
-//            ]
-//        )
-//    ]
-//)

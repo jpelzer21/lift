@@ -8,6 +8,7 @@ class UserViewModel: ObservableObject {
     @Published var templates: [WorkoutTemplate] = []
     @Published var groups: [WorkoutGroup] = []
     @Published var isLoading = false
+    @Published var isLoadingGroups: Bool = false
     
     // Basic Info
     @Published var userName: String = "Loading..."
@@ -377,8 +378,8 @@ extension UserViewModel {
             let completedSets = exercise.sets.filter { $0.isCompleted }
             let exerciseData: [String: Any] = [
                 "name": exercise.name.capitalized,
-                "muscleGroups": [],
-                "barType": "",
+                "muscleGroups": exercise.muscleGroups,
+                "barType": exercise.barType,
                 "createdBy": userID,
                 "createdAt": Timestamp(date: Date()),
                 "lastSetDate": Timestamp(date: Date()),
@@ -497,6 +498,53 @@ extension UserViewModel {
             }
         }
     }
+    
+//    func updateTemplate(title: String, exercises: [Exercise], completion: @escaping (Bool, Error?) -> Void) {
+//        guard let userID = userID else {
+//            completion(false, NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
+//            return
+//        }
+//        
+//        let templatesRef = db.collection("users").document(userID).collection("templates")
+//        
+//        templatesRef.whereField("title", isEqualTo: title).getDocuments { snapshot, error in
+//            if let error = error {
+//                completion(false, error)
+//                return
+//            }
+//            
+//            guard let doc = snapshot?.documents.first else {
+//                completion(false, NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Template not found"]))
+//                return
+//            }
+//
+//            var exercisesData: [[String: Any]] = []
+//            for exercise in exercises {
+//                var setsData: [[String: Any]] = []
+//                for set in exercise.sets {
+//                    setsData.append([
+//                        "setNum": set.number,
+//                        "weight": set.weight,
+//                        "reps": set.reps
+//                    ])
+//                }
+//                exercisesData.append([
+//                    "name": exercise.name,
+//                    "sets": setsData
+//                ])
+//            }
+//
+//            let updatedTemplate: [String: Any] = [
+//                "title": title,
+//                "exercises": exercisesData,
+//                "lastEdited": Timestamp(date: Date())
+//            ]
+//            
+//            templatesRef.document(doc.documentID).setData(updatedTemplate, merge: false) { error in
+//                completion(error == nil, error)
+//            }
+//        }
+//    }
 
     // called when WorkoutView appears
     func loadWorkoutTemplate(title: String, completion: @escaping ([Exercise]?, Error?) -> Void) {
@@ -570,6 +618,7 @@ extension UserViewModel {
     }
     
     func fetchUserGroups() {
+        self.isLoadingGroups = true
         guard let userID = Auth.auth().currentUser?.uid else {
             print("User not authenticated")
             return
@@ -593,6 +642,7 @@ extension UserViewModel {
                 
                 guard !userGroups.isEmpty else {
                     self.groups = []
+                    self.isLoadingGroups = false
                     return
                 }
                 
@@ -649,8 +699,10 @@ extension UserViewModel {
 
                         dispatchGroup.notify(queue: .main) {
                             self.groups = fetchedGroups
+                            self.isLoadingGroups = false
                         }
                     }
+                
             }
     }
     
@@ -772,6 +824,63 @@ extension UserViewModel {
                 
                 completion(templates)
             }
+    }
+    
+    func deleteGroup(_ group: WorkoutGroup) {
+        let groupId = group.id
+        let groupRef = db.collection("groups").document(groupId)
+        let membersRef = groupRef.collection("members")
+        
+        // Step 1: Get all members in the group
+        membersRef.getDocuments { [weak self] snapshot, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                print("❌ Failed to fetch members: \(error.localizedDescription)")
+                return
+            }
+
+            let memberDocs = snapshot?.documents ?? []
+            let batch = self.db.batch()
+
+            // Step 2: Remove the group reference from each user's path
+            for doc in memberDocs {
+                let userId = doc.documentID
+                let userGroupRef = self.db.collection("users").document(userId).collection("groups").document(groupId)
+                batch.deleteDocument(userGroupRef)
+
+                // Optional: delete member record from group
+                let groupMemberRef = membersRef.document(userId)
+                batch.deleteDocument(groupMemberRef)
+            }
+
+            // Step 3: Optionally delete group templates
+            self.db.collection("groups").document(groupId).collection("templates").getDocuments { templateSnap, err in
+                if let err = err {
+                    print("⚠️ Couldn't fetch templates: \(err.localizedDescription)")
+                } else {
+                    for templateDoc in templateSnap?.documents ?? [] {
+                        let templateRef = groupRef.collection("templates").document(templateDoc.documentID)
+                        batch.deleteDocument(templateRef)
+                    }
+                }
+
+                // Step 4: Delete the group document itself
+                batch.deleteDocument(groupRef)
+
+                // Step 5: Commit the batch
+                batch.commit { error in
+                    if let error = error {
+                        print("❌ Failed to delete group: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Group \(groupId) and all references deleted.")
+                        DispatchQueue.main.async {
+                            self.groups.removeAll { $0.id == groupId }
+                        }
+                    }
+                }
+            }
+        }
     }
     
 }

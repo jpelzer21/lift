@@ -55,10 +55,6 @@ struct LoginView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .autocapitalization(.words)
                     .padding(.horizontal)
-//                TextField("Weight", text: $weight)
-//                    .textFieldStyle(RoundedBorderTextFieldStyle())
-//                    .autocapitalization(.words)
-//                    .padding(.horizontal)
             }
             
             TextField("Email", text: $email)
@@ -129,7 +125,7 @@ struct LoginView: View {
             .buttonStyle(PlainButtonStyle())
             .frame(maxWidth: .infinity)
             
-            // Apple Sign-In button
+            // TODO: Apple Sign-In button
             Button(action: {
                 Task {
 //                    _ = await signInWithGoogle()
