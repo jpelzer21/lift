@@ -73,9 +73,8 @@ struct HomePageView: View {
                     
                     // -----------------------------------------------------------------------------
                     
-                    
-                    VStack { // In progress workout
-                        if let workout = inProgressWorkout {
+                    if let workout = inProgressWorkout { // In progress workout
+                        VStack {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("In-Progress Workout")
                                     .font(.title2)
@@ -129,9 +128,9 @@ struct HomePageView: View {
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
-                        
+                        .padding()
                     }
-                    .padding()
+                   
                     
                     
                     // -----------------------------------------------------------------------------
