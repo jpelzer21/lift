@@ -22,6 +22,7 @@ struct WorkoutView: View {
     @State private var dragOverIndex: Int?
 
     private let db = Firestore.firestore()
+    var onFinish: (() -> Void)? = nil
     
     var body: some View {
         ZStack {
@@ -197,9 +198,11 @@ struct WorkoutView: View {
                         onSaveWorkout: {
                             saveWorkout()
                             saveExercises()
+                            onFinish?()
                             presentationMode.wrappedValue.dismiss()
                         },
                         onSaveTemplate: {
+                            onFinish?()
                             saveWorkoutAsTemplate()
                         }
                     )

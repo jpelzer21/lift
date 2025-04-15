@@ -17,9 +17,6 @@ struct HomePageView: View {
     @State private var isLoadingGroups = true
     
     @State private var inProgressWorkout: WorkoutSession? = nil
-    
-    let workedOutDates: [Date] = [Date().addingTimeInterval(-86400 * 2), Date()]
-
 
     var currentWeek: [Date] {
         let calendar = Calendar.current
@@ -88,15 +85,34 @@ struct HomePageView: View {
                 
                 // -----------------------------------------------------------------------------
                 
-                MyTemplatesView(viewModel: viewModel, showDeleteButton: $showDeleteButton, showWorkoutView: $showWorkoutView, selectedWorkoutTitle: $selectedWorkoutTitle, selectedExercises: $selectedExercises)
+                MyTemplatesView(
+                    viewModel: viewModel,
+                    showDeleteButton: $showDeleteButton,
+                    showWorkoutView: $showWorkoutView,
+                    selectedWorkoutTitle: $selectedWorkoutTitle,
+                    selectedExercises: $selectedExercises
+                )
                 
                 // ----------------------------------------------------------------------------------------------------
                 
-                MyGroupsView(viewModel: viewModel, selectedGroup: $selectedGroup, showJoinGroup: $showJoinGroup, showCreateGroup: $showCreateGroup)
+                MyGroupsView(
+                    viewModel: viewModel,
+                    selectedGroup: $selectedGroup,
+                    showJoinGroup: $showJoinGroup,
+                    showCreateGroup: $showCreateGroup
+                )
                 
                 // ----------------------------------------------------------------------------------------------------
                 
-                WeeklyWorkoutView(currentWeek: currentWeek, workedOut: workedOut)
+                WeeklyWorkoutView(
+                    currentWeek: currentWeek,
+                    workedOut: { date in
+                        viewModel.workedOutDates.contains {
+                            Calendar.current.isDate($0, inSameDayAs: date)
+                        }
+                    }
+                )
+                .padding(.bottom, 10)
                 
                 // ----------------------------------------------------------------------------------------------------
                 
@@ -107,10 +123,17 @@ struct HomePageView: View {
         }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView, onDismiss: {
-            inProgressWorkout = WorkoutSession(id: UUID(), title: selectedWorkoutTitle, exercises: selectedExercises)
+            if inProgressWorkout == nil {
+                inProgressWorkout = WorkoutSession(id: UUID(), title: selectedWorkoutTitle, exercises: selectedExercises)
+            }
             viewModel.fetchTemplatesRealtime()
         }) {
-            WorkoutView(workoutTitle: $selectedWorkoutTitle, exercises: $selectedExercises)
+            WorkoutView(workoutTitle: $selectedWorkoutTitle,
+                        exercises: $selectedExercises,
+                        onFinish: {
+                            inProgressWorkout = nil
+                            showWorkoutView = false
+                        })
         }
         .sheet(isPresented: $showJoinGroup) {
             JoinGroupView()
@@ -129,7 +152,7 @@ struct HomePageView: View {
     }
 
     func workedOut(on day: Date) -> Bool {
-        workedOutDates.contains(where: { isSameDay($0, day) })
+        viewModel.workedOutDates.contains(where: { isSameDay($0, day) })
     }
     
 }
@@ -335,74 +358,59 @@ struct MyGroupsView: View {
 
 
 struct WeeklyWorkoutView: View {
+    @Environment(\.colorScheme) var colorScheme
     let currentWeek: [Date]
     let workedOut: (Date) -> Bool
 
-    @Environment(\.colorScheme) var colorScheme
-
     var body: some View {
-        VStack(alignment: .center, spacing: 10) {
+        VStack {
+            // Total Count
+            let workoutText = currentWeek.filter { workedOut($0) }.count == 1 ? "Workout" : "Workouts"
+            Text("\(currentWeek.filter { workedOut($0) }.count) \(workoutText)")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundColor(.pink)
+            
+            // Progress Bar or Streak
+            Text("Current Streak: \(calculateStreak()) days")
+                .foregroundColor(.gray)
+
+            // Week Days Grid
             HStack {
-//                Text("Weekly Workouts:")
-//                    .font(.title2)
-//                    .fontWeight(.semibold)
-//                    .frame(maxWidth: .infinity, alignment: .leading)
-//                Spacer()
-            }
-            .padding(.horizontal, 24)
-
-            VStack(spacing: 16) {
-                // Count / Progress
-                Text("\(currentWeek.filter { workedOut($0) }.count) Workouts")
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.pink)
-
-                // Optional: Streak or percentage
-                Text("Current Streak: \(calculateStreak()) days")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-
-                HStack {
-                    ForEach(currentWeek, id: \.self) { day in
-                        VStack(spacing: 8) {
-                            if workedOut(day) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.title3)
-                            } else if day < Date() {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.red)
-                                    .font(.title3)
-                            } else {
-                                Text("\(Calendar.current.component(.day, from: day))")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                            Text(day.shortWeekday)
-                                .font(.caption2)
-                                .foregroundColor(.gray)
+                ForEach(currentWeek, id: \.self) { day in
+                    VStack {
+                        if workedOut(day) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        } else if day < Date() {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                        } else {
+                            Text("\(Calendar.current.component(.day, from: day))")
+                                .foregroundColor(.primary)
                         }
-                        .frame(width: 40)
+                        Text(day.shortWeekday)
+                            .font(.caption2)
+                            .foregroundColor(.gray)
                     }
+                    .frame(width: 40)
                 }
-                .padding(.horizontal, 10)
             }
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
-                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 4)
-            )
+            .padding(.vertical, 5)
         }
-        .padding(.bottom, 30)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
+                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 4)
+        )
+        
     }
-    
+
     func calculateStreak() -> Int {
         let today = Date()
-        let sortedDays = currentWeek.sorted().reversed()
+        let sorted = currentWeek.sorted().reversed()
         var streak = 0
-        for day in sortedDays {
+        for day in sorted {
             if Calendar.current.isDate(day, inSameDayAs: today) || day < today {
                 if workedOut(day) {
                     streak += 1
@@ -482,3 +490,9 @@ struct WorkoutSession: Identifiable, Codable {
 
  
  
+
+extension AnyTransition {
+    static var slideAndFade: AnyTransition {
+        .move(edge: .bottom).combined(with: .opacity)
+    }
+}

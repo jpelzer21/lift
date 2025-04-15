@@ -29,12 +29,12 @@ class UserViewModel: ObservableObject {
     @Published var goalSugars: Int = 0
     
     @Published var memberSince: Date = Date()
-    
-    // Profile Completion
     @Published var profileCompletion: Double = 0
     
     @Published var userExercises: [Exercise] = []
     @Published var customFoods: [FoodItem] = []
+    
+    @Published var workedOutDates: [Date] = []
     
     
     static let shared = UserViewModel()
@@ -77,6 +77,7 @@ class UserViewModel: ObservableObject {
         fetchUserData()
         setupRealtimeListener()
         fetchTemplatesRealtime()
+        listenToWorkoutDates()
         fetchUserGroups()
         fetchExercises()
         startListeningForCustomFoods()
@@ -238,14 +239,29 @@ extension UserViewModel {
         }
     }
     
-    func incrementWorkoutCount() {
+    func listenToWorkoutDates() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
-        let statsRef = db.collection("users").document(userID)
-        statsRef.setData([
-            "workoutCount": FieldValue.increment(Int64(1)),
-            "lastWorkoutDate": Timestamp(date: Date())
-        ], merge: true)
+        db.collection("users").document(userID).collection("workouts")
+            .addSnapshotListener { [weak self] snapshot, error in
+                if let error = error {
+                    print("Error fetching workouts: \(error.localizedDescription)")
+                    return
+                }
+
+                let formatter = ISO8601DateFormatter()
+                self?.workedOutDates = snapshot?.documents.compactMap { doc in
+                    if let timestamp = doc.data()["date"] as? Timestamp {
+                        return timestamp.dateValue()
+                    }
+                    if let isoString = doc.data()["date"] as? String {
+                        return formatter.date(from: isoString)
+                    }
+                    return nil
+                } ?? []
+
+                self?.workedOutDates = self?.workedOutDates ?? []
+            }
     }
     
 }
