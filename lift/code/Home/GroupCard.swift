@@ -72,7 +72,7 @@ struct GroupCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
-        .padding(.horizontal, 16)
+//        .padding(.horizontal, 16)
         .padding(.vertical, 8)
         
     }
