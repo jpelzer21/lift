@@ -60,8 +60,8 @@ struct HomePageView: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.pink)
                     .cornerRadius(16)
-                    .shadow(color: Color.pink.opacity(0.3), radius: 6, x: 0, y: 4)
                 }
+                .shadow(color: Color.pink.opacity(0.3), radius: 6, x: 0, y: 4)
                 .padding(.top, 20)
                 .padding()
                 
@@ -116,8 +116,6 @@ struct HomePageView: View {
                 
                 // ----------------------------------------------------------------------------------------------------
                 
-//                Rectangle()
-//                    .frame(width: UIScreen.main.bounds.width, height: 20)
             }
             
         }
@@ -261,7 +259,9 @@ struct MyTemplatesView: View {
                         }
                     }
                     .padding(.leading)
+                    .padding(.vertical, 10)
                 }
+                
             }
         }
 //        .padding(.horizontal)
@@ -401,9 +401,8 @@ struct WeeklyWorkoutView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
-                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 4)
-        )
-        
+                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+        )        
     }
 
     func calculateStreak() -> Int {

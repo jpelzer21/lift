@@ -38,11 +38,13 @@ struct WorkoutView: View {
                                 })
                                 .font(.largeTitle)
                                 .fontWeight(.medium)
+                                .multilineTextAlignment(.center)
                                 .customTextFieldStyle()
                             } else {
                                 Text(workoutTitle)
                                     .font(.largeTitle)
                                     .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
                                     .onTapGesture {
                                         isEditingTitle = true
                                     }
@@ -259,6 +261,8 @@ struct WorkoutView: View {
         }
         
         private func saveWorkout() {
+            userViewModel.workedOutDates.append(Date())
+            print("Workout Date: \(userViewModel.workedOutDates)")
             isLoading = true
             userViewModel.saveWorkout(title: workoutTitle, exercises: exercises) { error in
                 isLoading = false

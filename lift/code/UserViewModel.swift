@@ -77,7 +77,7 @@ class UserViewModel: ObservableObject {
         fetchUserData()
         setupRealtimeListener()
         fetchTemplatesRealtime()
-        listenToWorkoutDates()
+        fetchWorkedOutDates()
         fetchUserGroups()
         fetchExercises()
         startListeningForCustomFoods()
@@ -239,28 +239,31 @@ extension UserViewModel {
         }
     }
     
-    func listenToWorkoutDates() {
+    func fetchWorkedOutDates() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
-        
         db.collection("users").document(userID).collection("workouts")
-            .addSnapshotListener { [weak self] snapshot, error in
+            .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching workouts: \(error.localizedDescription)")
                     return
                 }
 
+                guard let documents = snapshot?.documents else { return }
+                                
                 let formatter = ISO8601DateFormatter()
-                self?.workedOutDates = snapshot?.documents.compactMap { doc in
-                    if let timestamp = doc.data()["date"] as? Timestamp {
-                        return timestamp.dateValue()
+                
+                DispatchQueue.main.async {
+                    self.workedOutDates = documents.compactMap { doc in
+                        if let timestamp = doc.data()["timestamp"] as? Timestamp {
+                            return timestamp.dateValue()
+                        }
+                        if let isoString = doc.data()["timestamp"] as? String {
+                            return formatter.date(from: isoString)
+                        }
+                        return nil
                     }
-                    if let isoString = doc.data()["date"] as? String {
-                        return formatter.date(from: isoString)
-                    }
-                    return nil
-                } ?? []
-
-                self?.workedOutDates = self?.workedOutDates ?? []
+                    print(self.workedOutDates)
+                }
             }
     }
     

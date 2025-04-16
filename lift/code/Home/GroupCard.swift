@@ -66,13 +66,13 @@ struct GroupCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
-//        .padding(.horizontal, 16)
+        .padding(.horizontal, 5)
         .padding(.vertical, 8)
         
     }
