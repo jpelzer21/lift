@@ -4,6 +4,7 @@ struct HomePageView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var viewModel: UserViewModel
     
+    @State private var didFinishWorkout = false
     @State private var showWorkoutView = false
     @State private var selectedExercises: [Exercise] = []
     @State private var selectedWorkoutTitle: String = "Empty Workout"
@@ -121,17 +122,21 @@ struct HomePageView: View {
         }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView, onDismiss: {
-            if inProgressWorkout == nil {
+            if !didFinishWorkout && inProgressWorkout == nil {
                 inProgressWorkout = WorkoutSession(id: UUID(), title: selectedWorkoutTitle, exercises: selectedExercises)
             }
             viewModel.fetchTemplatesRealtime()
+            didFinishWorkout = false
         }) {
-            WorkoutView(workoutTitle: $selectedWorkoutTitle,
-                        exercises: $selectedExercises,
-                        onFinish: {
-                            inProgressWorkout = nil
-                            showWorkoutView = false
-                        })
+            WorkoutView(
+                workoutTitle: $selectedWorkoutTitle,
+                exercises: $selectedExercises,
+                onFinish: {
+                    inProgressWorkout = nil
+                    didFinishWorkout = true
+                    showWorkoutView = false
+                }
+            )
         }
         .sheet(isPresented: $showJoinGroup) {
             JoinGroupView()
@@ -402,7 +407,7 @@ struct WeeklyWorkoutView: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(colorScheme == .dark ? .systemGray6 : .white))
                 .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
-        )        
+        )
     }
 
     func calculateStreak() -> Int {

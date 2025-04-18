@@ -67,6 +67,7 @@ struct JoinGroupView: View {
     }
 
     private func joinGroup() {
+        print("JOIN GROUP() CALLED")
         guard !groupCode.isEmpty else {
             errorMessage = "Please enter a group code."
             return

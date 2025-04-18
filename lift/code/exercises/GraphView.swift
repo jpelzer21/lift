@@ -13,8 +13,9 @@ struct GraphView: View {
     @State private var showFirstSets: Bool = true
     
     @State private var barType: String = ""
-
     let exerciseName: String // name passed through
+    
+    @State private var listener: ListenerRegistration?
     
     enum Metric: String, CaseIterable {
             case weight = "Weight"
@@ -227,6 +228,9 @@ struct GraphView: View {
             .onAppear {
                 fetchSets(name: exerciseName)
             }
+            .onDisappear {
+                listener?.remove()
+            }
             .padding(.bottom, 20)
 //        }
     }
@@ -250,7 +254,8 @@ struct GraphView: View {
         let db = Firestore.firestore()
         let exerciseRef = db.collection("users").document(userID)
             .collection("exercises").document(name.lowercased().replacingOccurrences(of: " ", with: "_"))
-            
+        
+        // First get the barType (one-time read)
         exerciseRef.getDocument { docSnapshot, error in
             if let error = error {
                 print("Error getting document: \(error)")
@@ -270,16 +275,21 @@ struct GraphView: View {
             }
         }
         
-        exerciseRef.collection("sets").order(by: "date").getDocuments { snapshot, error in
+        // Remove any existing listener to avoid duplicates
+        self.listener?.remove()
+        
+        // Add snapshot listener for sets collection
+        self.listener = exerciseRef.collection("sets").order(by: "date").addSnapshotListener { snapshot, error in
             DispatchQueue.main.async {
                 self.isLoading = false
+                
                 if let error = error {
-                    print("Error fetching sets: \(error.localizedDescription)")
-                    self.exerciseSets = []  // Ensure we clear out old data
+                    print("Error listening to sets: \(error.localizedDescription)")
+                    self.exerciseSets = []
                     return
                 }
                 
-                guard let documents = snapshot?.documents, !documents.isEmpty else {
+                guard let documents = snapshot?.documents else {
                     print("No sets found for \(name)")
                     self.exerciseSets = []
                     return

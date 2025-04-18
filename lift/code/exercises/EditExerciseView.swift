@@ -106,6 +106,7 @@ struct EditExerciseView: View {
     }
 
     private func toggleMuscleGroup(_ muscle: String) {
+        print("TOGGLE MUSCLE GROUP() CALLED")
         if selectedMuscleGroups.contains(muscle) {
             selectedMuscleGroups.removeAll { $0 == muscle }
         } else {
@@ -115,6 +116,7 @@ struct EditExerciseView: View {
     }
 
     private func loadExerciseData() {
+        print("LOAD EXERCISE DATA() CALLED")
         guard let userID = Auth.auth().currentUser?.uid else {
             errorMessage = "User not authenticated."
             isLoading = false
@@ -147,6 +149,7 @@ struct EditExerciseView: View {
     }
 
     private func updateExercise() {
+        print("UPDATE EXERCISE() CALLED")
         guard let userID = Auth.auth().currentUser?.uid else {
             errorMessage = "User not authenticated."
             return

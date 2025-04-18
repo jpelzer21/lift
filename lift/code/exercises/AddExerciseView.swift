@@ -102,6 +102,7 @@ struct AddExerciseView: View {
     
     // Toggle muscle group selection
     private func toggleMuscleGroup(_ muscle: String) {
+        print("TOGGLE MUSCLE GROUP() CALLED")
         if selectedMuscleGroups.contains(muscle) {
             selectedMuscleGroups.removeAll { $0 == muscle }
         } else {
@@ -111,6 +112,7 @@ struct AddExerciseView: View {
 
     // Save exercise to Firestore
     private func saveExercise() {
+        print("SAVE EXERCISES() CALLED")
         isLoading = true
         errorMessage = nil
         guard let userID = Auth.auth().currentUser?.uid else {

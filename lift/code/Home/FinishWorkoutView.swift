@@ -11,7 +11,7 @@ struct FinishWorkoutView: View {
     var completedExercises: [Exercise]
     @Binding var isPresented: Bool
     var onSaveWorkout: () -> Void
-    var onSaveTemplate: () -> Void
+//    var onSaveTemplate: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
@@ -37,7 +37,7 @@ struct FinishWorkoutView: View {
                 }
                 .frame(maxHeight: 200)
                 
-                Text("What would you like to do?")
+                Text("Finish Workout?")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .padding(.top)
@@ -55,18 +55,19 @@ struct FinishWorkoutView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     
-                    Button(action: {
-                        onSaveTemplate()
-                        onSaveWorkout()
-                        isPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down")
-                            Text("Update Values Only")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
+                    
+//                    Button(action: {
+//                        onSaveTemplate()
+//                        onSaveWorkout()
+//                        isPresented = false
+//                    }) {
+//                        HStack {
+//                            Image(systemName: "square.and.arrow.down")
+//                            Text("Update Values Only")
+//                        }
+//                        .frame(maxWidth: .infinity)
+//                    }
+//                    .buttonStyle(.bordered)
                 }
             }
             Button(action: {

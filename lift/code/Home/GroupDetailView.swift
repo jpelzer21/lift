@@ -184,6 +184,7 @@ struct GroupDetailView: View {
     }
     
     private func fetchGroupTemplates() {
+        print("FETCH GROUP TEMPLATES() CALLED")
         let db = Firestore.firestore()
         
         db.collection("groups")
@@ -274,6 +275,7 @@ struct GroupDetailView: View {
 
     
     private func addTemplateToGroup(_ template: WorkoutTemplate) {
+        print("ADD TEMPLATE TO GROUP() CALLED")
         guard let userId = Auth.auth().currentUser?.uid else {
             print("Error: User not logged in.")
             return

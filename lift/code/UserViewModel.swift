@@ -388,25 +388,46 @@ extension UserViewModel {
             completion(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
             return
         }
+        
         let batch = db.batch()
+        
         for exercise in exercises {
             let exerciseRef = db.collection("users")
                 .document(userID)
                 .collection("exercises")
                 .document(exercise.name.lowercased().replacingOccurrences(of: " ", with: "_"))
+            
             let completedSets = exercise.sets.filter { $0.isCompleted }
-            let exerciseData: [String: Any] = [
+            
+            print("Saving exercise: \(exercise.name)")
+            print("Bar type: \(exercise.barType)")
+            print("Muscle groups: \(exercise.muscleGroups)")
+            
+            // Create base update data with mandatory fields
+            var exerciseData: [String: Any] = [
                 "name": exercise.name.capitalized,
-                "muscleGroups": exercise.muscleGroups,
-                "barType": exercise.barType,
-                "createdBy": userID,
-                "createdAt": Timestamp(date: Date()),
                 "lastSetDate": Timestamp(date: Date()),
                 "setCount": FieldValue.increment(Int64(completedSets.count))
             ]
             
-            batch.setData(exerciseData, forDocument: exerciseRef, merge: true)
-            // Add completed sets and check for PRs
+            // Only include optional fields if they have values
+            if exercise.barType != "Other" {
+                exerciseData["barType"] = exercise.barType
+            }
+            if !exercise.muscleGroups.isEmpty {
+                exerciseData["muscleGroups"] = exercise.barType
+            }
+            
+            // Only include createdBy/createdAt for new documents
+            if exercise.sets.isEmpty {
+                exerciseData["createdBy"] = userID
+                exerciseData["createdAt"] = Timestamp(date: Date())
+            }
+            
+            // Use updateData instead of setData to only modify specified fields
+            batch.updateData(exerciseData, forDocument: exerciseRef)
+            
+            // Add completed sets
             for set in completedSets {
                 let newSetRef = exerciseRef.collection("sets").document()
                 let setData: [String: Any] = [
@@ -418,6 +439,7 @@ extension UserViewModel {
                 batch.setData(setData, forDocument: newSetRef)
             }
         }
+        
         batch.commit { error in
             DispatchQueue.main.async {
                 completion(error)
@@ -518,53 +540,6 @@ extension UserViewModel {
         }
     }
     
-//    func updateTemplate(title: String, exercises: [Exercise], completion: @escaping (Bool, Error?) -> Void) {
-//        guard let userID = userID else {
-//            completion(false, NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
-//            return
-//        }
-//        
-//        let templatesRef = db.collection("users").document(userID).collection("templates")
-//        
-//        templatesRef.whereField("title", isEqualTo: title).getDocuments { snapshot, error in
-//            if let error = error {
-//                completion(false, error)
-//                return
-//            }
-//            
-//            guard let doc = snapshot?.documents.first else {
-//                completion(false, NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Template not found"]))
-//                return
-//            }
-//
-//            var exercisesData: [[String: Any]] = []
-//            for exercise in exercises {
-//                var setsData: [[String: Any]] = []
-//                for set in exercise.sets {
-//                    setsData.append([
-//                        "setNum": set.number,
-//                        "weight": set.weight,
-//                        "reps": set.reps
-//                    ])
-//                }
-//                exercisesData.append([
-//                    "name": exercise.name,
-//                    "sets": setsData
-//                ])
-//            }
-//
-//            let updatedTemplate: [String: Any] = [
-//                "title": title,
-//                "exercises": exercisesData,
-//                "lastEdited": Timestamp(date: Date())
-//            ]
-//            
-//            templatesRef.document(doc.documentID).setData(updatedTemplate, merge: false) { error in
-//                completion(error == nil, error)
-//            }
-//        }
-//    }
-
     // called when WorkoutView appears
     func loadWorkoutTemplate(title: String, completion: @escaping ([Exercise]?, Error?) -> Void) {
         guard let userID = userID else {

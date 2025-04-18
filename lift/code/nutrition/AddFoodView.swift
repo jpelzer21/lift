@@ -170,6 +170,7 @@ struct AddFoodView: View {
     }
     
     func addToDailyTotal(_ food: FoodItem) {
+        print("ADD TO DAILY TOTAL() CALLED")
         let adjustedFood = FoodItem(
             servingSize: food.servingSize,
             name: food.name,
@@ -195,6 +196,7 @@ struct AddFoodView: View {
     }
     
     func searchByName(_ name: String, completion: @escaping ([FoodItem]) -> Void) {
+        print("SEARCH BY NAME() CALLED")
         guard !name.isEmpty else {
             completion([])
             return
@@ -320,6 +322,7 @@ struct AddFoodView: View {
     }
 
     private func showScanError(_ message: String) {
+        print("SHOW SCAN ERROR() CALLED")
         DispatchQueue.main.async {
             self.scanErrorMessage = message
             self.isShowingScanError = true

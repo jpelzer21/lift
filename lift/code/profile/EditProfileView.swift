@@ -191,6 +191,7 @@ struct EditProfileView: View {
     }
 
     private func saveChanges() {
+        print("SAVE CHANGES() CALLED")
         var base64String: String? = nil
         
         if let image = profileImage,

@@ -81,6 +81,7 @@ struct GroupMembersView: View {
     }
 
     private func removeMember(_ member: Member) {
+        print("REMOVE MEMBER() CALLED")
         let db = Firestore.firestore()
         
         // Remove member from group's subcollection

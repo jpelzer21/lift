@@ -197,15 +197,12 @@ struct WorkoutView: View {
                     FinishWorkoutView(
                         completedExercises: exercises.filter { $0.allSetsCompleted },
                         isPresented: $showingFinishWorkout,
-                        onSaveWorkout: {
+                        onSaveWorkout: { // called for both buttons
                             saveWorkout()
                             saveExercises()
+                            saveWorkoutAsTemplate()
                             onFinish?()
                             presentationMode.wrappedValue.dismiss()
-                        },
-                        onSaveTemplate: {
-                            onFinish?()
-                            saveWorkoutAsTemplate()
                         }
                     )
                 }
@@ -229,6 +226,7 @@ struct WorkoutView: View {
     }
     
     private func completedSets() -> Int {
+        print("COMPLETED SETS() CALLED")
         var result = 0
         for exercise in exercises {
             var allSetsComplete = true
@@ -248,6 +246,7 @@ struct WorkoutView: View {
     
     
     private func saveExercises() {
+        print("SAVE EXERCISES() CALLED")
             isLoading = true
             userViewModel.saveExercises(exercises: exercises) { error in
                 isLoading = false
@@ -261,6 +260,7 @@ struct WorkoutView: View {
         }
         
         private func saveWorkout() {
+            print("SAVE WORKOUT() CALLED")
             userViewModel.workedOutDates.append(Date())
             print("Workout Date: \(userViewModel.workedOutDates)")
             isLoading = true
@@ -276,6 +276,7 @@ struct WorkoutView: View {
         }
         
         private func saveWorkoutAsTemplate() {
+            print("SAVE WORKOUT AS TEMPLATE() CALLED")
             isLoading = true
             userViewModel.saveWorkoutAsTemplate(title: workoutTitle, exercises: exercises) { isUpdate, error in
                 isLoading = false
@@ -285,7 +286,6 @@ struct WorkoutView: View {
                 } else {
                     showToast = true
                     print("Template \(isUpdate ? "updated" : "saved") successfully")
-                    
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         showToast = false
                     }
@@ -294,6 +294,7 @@ struct WorkoutView: View {
         }
         
         private func loadWorkoutTemplate() {
+            print("LOAD WORKOUT TEMPLATE() CALLED")
             isLoading = true
             userViewModel.loadWorkoutTemplate(title: workoutTitle) { exercises, error in
                 isLoading = false

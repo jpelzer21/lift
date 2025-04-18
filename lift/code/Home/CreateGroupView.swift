@@ -78,6 +78,7 @@ struct CreateGroupView: View {
     }
 
     private func createGroup() {
+        print("CREATE GROUP() CALLED")
         // Validate inputs
         guard !groupName.isEmpty else {
             errorMessage = "Group name cannot be empty"

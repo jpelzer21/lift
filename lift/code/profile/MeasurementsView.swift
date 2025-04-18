@@ -155,6 +155,7 @@ struct MeasurementsView: View {
     
     // **Fetch user measurements from Firestore**
     private func fetchMeasurements() {
+        print("FETCH MEASUREMENTS() CALLED")
         guard let userID = Auth.auth().currentUser?.uid else { return }
 
         let db = Firestore.firestore()
@@ -208,6 +209,7 @@ struct MeasurementsView: View {
     
     // **Save body measurements to Firestore**
     private func saveMeasurements() {
+        print("SAVE MEASUREMENTS() CALLED")
         guard let userID = Auth.auth().currentUser?.uid else { return }
 
         let db = Firestore.firestore()
@@ -234,6 +236,7 @@ struct MeasurementsView: View {
 
     // **Save weight to Firestore**
     private func saveWeight() {
+        print("SAVE WEIGHT() CALLED")
         guard let userID = Auth.auth().currentUser?.uid,
               let weightValue = Double(weight) else {
             errorMessage = "Invalid weight input"
@@ -267,6 +270,7 @@ struct MeasurementsView: View {
     }
 
     private func saveNewWeight(weightValue: Double) {
+        print("SAVE NEW WEIGHT() CALLED")
         guard let userID = Auth.auth().currentUser?.uid else {
             errorMessage = "User not found"
             return

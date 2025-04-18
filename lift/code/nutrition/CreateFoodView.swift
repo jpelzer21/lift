@@ -70,6 +70,7 @@ struct CreateFoodView: View {
     }
     
     private func saveFood() {
+        print("SAVE FOOD() CALLED")
         guard !name.isEmpty else {
             errorMessage = "Food name must not be empty."
             return
