@@ -31,17 +31,17 @@ class ExercisesViewModel: ObservableObject {
 
         switch selectedSortOption {
             case "Most Recent":
-                query = query.order(by: "lastSetDate", descending: true)
+            query = query.order(by: "lastSetDate", descending: true).limit(to: 20)
             case "Most Sets":
-                query = query.order(by: "setCount", descending: true)
+            query = query.order(by: "setCount", descending: true).limit(to: 20)
             case "Alphabetical A-Z":
-                query = query.order(by: "name", descending: false)
+                query = query.order(by: "name", descending: false).limit(to: 20)
             case "Alphabetical Z-A":
-                query = query.order(by: "name", descending: true)
+                query = query.order(by: "name", descending: true).limit(to: 20)
             case "Muscle Groups":
-                query = query.order(by: "muscleGroups", descending: true)
+                query = query.order(by: "muscleGroups", descending: true).limit(to: 20)
             default:
-                query = query.order(by: "name", descending: false) // Default to A-Z ordering
+                query = query.order(by: "name", descending: false).limit(to: 20) // Default to A-Z ordering
         }
 
         listener?.remove()

@@ -223,7 +223,7 @@ struct MyTemplatesView: View {
             }
             .padding(.horizontal)
 
-            if viewModel.isLoading {
+            if viewModel.isLoadingTemplates {
                 ProgressView("Loading templates...")
                     .padding()
             } else if viewModel.templates.isEmpty {

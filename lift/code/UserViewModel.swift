@@ -9,6 +9,7 @@ class UserViewModel: ObservableObject {
     @Published var groups: [WorkoutGroup] = []
     @Published var isLoading = false
     @Published var isLoadingGroups: Bool = false
+    @Published var isLoadingTemplates: Bool = false
     
     // Basic Info
     @Published var userName: String = "Loading..."
@@ -74,13 +75,24 @@ class UserViewModel: ObservableObject {
     // Call all of the function needed at start of runtime
     private func initializeForCurrentUser() {
         resetUserData()
-        fetchUserData()
-        setupRealtimeListener()
-        fetchTemplatesRealtime()
-        fetchWorkedOutDates()
-        fetchUserGroups()
-        fetchExercises()
-        startListeningForCustomFoods()
+//        fetchUserData()
+//        setupRealtimeListener()
+//        fetchTemplatesRealtime()
+//        fetchWorkedOutDates()
+//        fetchUserGroups()
+//        fetchExercises()
+//        startListeningForCustomFoods()
+        batchFetchInitialData { [weak self] error in
+            guard let self = self else { return }
+            if let error = error {
+                print("Initial load error: \(error.localizedDescription)")
+                return
+            }
+            // Optional: Update UI state
+            DispatchQueue.main.async {
+                self.isLoading = false
+            }
+        }
     }
     
     // Reset User Data
@@ -101,6 +113,272 @@ class UserViewModel: ObservableObject {
             self.memberSince = Date()
             self.profileCompletion = 0
             self.userExercises = []
+        }
+    }
+}
+
+
+// Initialize all important variables
+extension UserViewModel {
+    func batchFetchInitialData(completion: @escaping (Error?) -> Void) {
+        guard let userID = userID else {
+            completion(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
+            return
+        }
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.isLoadingGroups = true
+            self.isLoadingTemplates = true
+        }
+        
+        // 1. Create references to all documents/collections needed
+        let userRef = db.collection("users").document(userID)
+        let templatesRef = userRef.collection("templates").limit(to: 20)
+        let workoutsRef = userRef.collection("workouts").limit(to: 30)
+        let exercisesRef = userRef.collection("exercises").limit(to: 100)
+        let customFoodsRef = userRef.collection("customFoods").limit(to: 50)
+        let userGroupsRef = userRef.collection("groups").limit(to: 10)
+        
+        // 2. Create batch get request
+        let dispatchGroup = DispatchGroup()
+        var userData: [String: Any]?
+        var templates: [WorkoutTemplate] = []
+        var workedOutDates: [Date] = []
+        var exercises: [Exercise] = []
+        var customFoods: [FoodItem] = []
+//        var groupIDs: [(id: String, role: String)] = []
+        var lastError: Error?
+        
+        // 3. Fetch user document and critical collections
+        dispatchGroup.enter()
+        userRef.getDocument { snapshot, error in
+            if let error = error {
+                lastError = error
+            } else {
+                userData = snapshot?.data()
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 4. Fetch templates
+        dispatchGroup.enter()
+        templatesRef.getDocuments { snapshot, error in
+            if let error = error {
+                lastError = error
+            } else {
+                templates = snapshot?.documents.compactMap { doc in
+                    let data = doc.data()
+                    return WorkoutTemplate(
+                        id: doc.documentID,
+                        name: data["title"] as? String ?? "",
+                        exercises: data["exercises"] as? [Exercise] ?? []
+                    )
+                } ?? []
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 5. Fetch workout dates
+        dispatchGroup.enter()
+        workoutsRef.order(by: "timestamp", descending: true).limit(to: 7).getDocuments { snapshot, error in
+            if let error = error {
+                lastError = error
+            } else {
+                workedOutDates = snapshot?.documents.compactMap { doc in
+                    (doc.data()["timestamp"] as? Timestamp)?.dateValue()
+                } ?? []
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 6. Fetch exercises
+        dispatchGroup.enter()
+        exercisesRef.getDocuments { snapshot, error in
+            if let error = error {
+                lastError = error
+            } else {
+                exercises = snapshot?.documents.compactMap { doc in
+                    let data = doc.data()
+                    return Exercise(
+                        name: data["name"] as? String ?? "",
+                        sets: []
+                    )
+                } ?? []
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 7. Fetch custom foods
+        dispatchGroup.enter()
+        customFoodsRef.order(by: "name").limit(to: 20).getDocuments { snapshot, error in
+            if let error = error {
+                lastError = error
+            } else {
+                customFoods = snapshot?.documents.compactMap { doc in
+                    try? doc.data(as: FoodItem.self)
+                } ?? []
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 8. Fetch user's group IDs and group deatils
+        dispatchGroup.enter()
+        userGroupsRef.getDocuments { [weak self] snapshot, error in
+            guard let self = self else {
+                dispatchGroup.leave()
+                return
+            }
+            
+            if let error = error {
+                lastError = error
+                dispatchGroup.leave()
+                return
+            }
+            
+            guard let docs = snapshot?.documents else {
+                dispatchGroup.leave()
+                return
+            }
+            
+            let groupIds = docs.compactMap { $0.data()["groupId"] as? String }
+            guard !groupIds.isEmpty else {
+                DispatchQueue.main.async {
+                    self.groups = []
+                }
+                dispatchGroup.leave()
+                return
+            }
+            
+            // Chunk groups if more than 10
+            let chunkedGroupIds = groupIds.chunked(into: 10)
+            var allGroups: [WorkoutGroup] = []
+            let groupFetchGroup = DispatchGroup()
+            
+            for chunk in chunkedGroupIds {
+                groupFetchGroup.enter()
+                
+                // 1. First fetch basic group info
+                self.db.collection("groups")
+                    .whereField(FieldPath.documentID(), in: chunk)
+                    .getDocuments { (snapshot, error) in
+                        if let error = error {
+                            lastError = error
+                            groupFetchGroup.leave()
+                            return
+                        }
+                        
+                        guard let groupDocs = snapshot?.documents else {
+                            groupFetchGroup.leave()
+                            return
+                        }
+                        
+                        // 2. Process each group with its additional data
+                        let innerGroup = DispatchGroup()
+                        var processedGroups: [WorkoutGroup] = []
+                        
+                        for doc in groupDocs {
+                            innerGroup.enter()
+                            
+                            let data = doc.data()
+                            let groupId = doc.documentID
+                            let role = docs.first { ($0.data()["groupId"] as? String) == groupId }?
+                                .data()["role"] as? String ?? "member"
+                            
+                            // 3. Fetch templates and members concurrently
+                            let templatesGroup = DispatchGroup()
+                            var templates: [WorkoutTemplate] = []
+                            var members: [Member] = []
+                            
+                            // Fetch templates
+                            templatesGroup.enter()
+                            self.db.collection("groups").document(groupId)
+                                .collection("templates").limit(to: 10).getDocuments { snapshot, _ in
+                                    templates = snapshot?.documents.compactMap { doc in
+                                        let data = doc.data()
+                                        return WorkoutTemplate(
+                                            id: doc.documentID,
+                                            name: data["name"] as? String ?? "",
+                                            exercises: []
+                                        )
+                                    } ?? []
+                                    templatesGroup.leave()
+                                }
+                            
+                            // Fetch members
+                            templatesGroup.enter()
+                            self.db.collection("groups").document(groupId)
+                                .collection("members").limit(to: 20).getDocuments { snapshot, _ in
+                                    members = snapshot?.documents.compactMap { doc in
+                                        let data = doc.data()
+                                        return Member(
+                                            id: doc.documentID,
+                                            name: data["name"] as? String ?? "",
+                                            profileURL: URL(string: data["profileURL"] as? String ?? ""),
+                                            role: data["role"] as? String ?? "member"
+                                        )
+                                    } ?? []
+                                    templatesGroup.leave()
+                                }
+                            
+                            templatesGroup.notify(queue: .global()) {
+                                let group = WorkoutGroup(
+                                    id: groupId,
+                                    name: data["name"] as? String ?? "Unnamed Group",
+                                    description: data["description"] as? String ?? "",
+                                    memberCount: data["memberCount"] as? Int ?? 0,
+                                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                                    isAdmin: role == "admin",
+                                    templates: templates,
+                                    members: members
+                                )
+                                processedGroups.append(group)
+                                innerGroup.leave()
+                            }
+                        }
+                        
+                        innerGroup.notify(queue: .global()) {
+                            allGroups.append(contentsOf: processedGroups)
+                            groupFetchGroup.leave()
+                        }
+                    }
+            }
+            
+            groupFetchGroup.notify(queue: .main) {
+                self.groups = allGroups.sorted { $0.createdAt > $1.createdAt }
+                dispatchGroup.leave()
+            }
+        }
+        
+        
+        // 9. Process all results when complete
+        dispatchGroup.notify(queue: .main) {
+            self.isLoading = false
+            self.isLoadingGroups = false
+            self.isLoadingTemplates = false
+            
+            if let lastError = lastError {
+                completion(lastError)
+                return
+            }
+            
+            // Update all view model properties
+            if let userData = userData {
+                self.updateBasicInfo(from: userData)
+                self.calculateProfileCompletion()
+            }
+            
+            self.templates = templates
+            self.workedOutDates = workedOutDates
+            self.userExercises = exercises
+            self.customFoods = customFoods
+            
+            // Now setup realtime listeners for updates
+            self.setupRealtimeListener()
+            self.fetchTemplatesRealtime()
+            self.startListeningForCustomFoods()
+            
+            completion(nil)
         }
     }
 }
@@ -1089,3 +1367,13 @@ extension UserViewModel {
 //            }
 //        }
 //    }
+
+
+
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
