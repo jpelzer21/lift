@@ -13,6 +13,7 @@ import FirebaseAuth
 struct CreateGroupView: View {
     @Environment(\.dismiss) var dismiss
 
+    @State var name: String
     @State private var groupName: String = ""
     @State private var groupDescription: String = ""
     @State private var groupCode: String = ""
@@ -159,7 +160,8 @@ struct CreateGroupView: View {
                 let groupMemberData: [String: Any] = [
                     "userId": userId,
                     "joinedAt": joinedAt,
-                    "role": "admin"
+                    "role": "admin",
+                    "name": self.name
                 ]
                 
                 let batch = db.batch()

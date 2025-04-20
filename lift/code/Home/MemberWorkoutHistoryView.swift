@@ -1,3 +1,11 @@
+//
+//  MemberWorkoutHistoryView.swift
+//  lift
+//
+//  Created by Josh Pelzer on 4/20/25.
+//
+
+
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -49,7 +57,7 @@ struct MemberWorkoutHistoryView: View {
         let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         
         db.collection("users").document(memberId).collection("workouts")
-            .whereField("timestamp", isGreaterThanOrEqualTo: Timestamp(date: oneWeekAgo))
+            .limit(to: 7)
             .order(by: "timestamp", descending: true)
             .getDocuments { snapshot, error in
                 DispatchQueue.main.async {

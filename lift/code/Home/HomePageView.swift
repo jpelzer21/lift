@@ -139,10 +139,10 @@ struct HomePageView: View {
             )
         }
         .sheet(isPresented: $showJoinGroup) {
-            JoinGroupView()
+            JoinGroupView(name: viewModel.userName)
         }
         .sheet(isPresented: $showCreateGroup) {
-            CreateGroupView()
+            CreateGroupView(name: viewModel.userName)
         }
         .sheet(item: $selectedGroup) { group in
             GroupDetailView(group: group)

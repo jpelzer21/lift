@@ -138,7 +138,7 @@ extension UserViewModel {
         let workoutsRef = userRef.collection("workouts").limit(to: 30)
         let exercisesRef = userRef.collection("exercises").limit(to: 100)
         let customFoodsRef = userRef.collection("customFoods").limit(to: 50)
-        let userGroupsRef = userRef.collection("groups").limit(to: 10)
+//        let userGroupsRef = userRef.collection("groups").limit(to: 10)
         
         // 2. Create batch get request
         let dispatchGroup = DispatchGroup()
@@ -224,131 +224,8 @@ extension UserViewModel {
         
         // 8. Fetch user's group IDs and group deatils
         dispatchGroup.enter()
-        userGroupsRef.getDocuments { [weak self] snapshot, error in
-            guard let self = self else {
-                dispatchGroup.leave()
-                return
-            }
-            
-            if let error = error {
-                lastError = error
-                dispatchGroup.leave()
-                return
-            }
-            
-            guard let docs = snapshot?.documents else {
-                dispatchGroup.leave()
-                return
-            }
-            
-            let groupIds = docs.compactMap { $0.data()["groupId"] as? String }
-            guard !groupIds.isEmpty else {
-                DispatchQueue.main.async {
-                    self.groups = []
-                }
-                dispatchGroup.leave()
-                return
-            }
-            
-            // Chunk groups if more than 10
-            let chunkedGroupIds = groupIds.chunked(into: 10)
-            var allGroups: [WorkoutGroup] = []
-            let groupFetchGroup = DispatchGroup()
-            
-            for chunk in chunkedGroupIds {
-                groupFetchGroup.enter()
-                
-                // 1. First fetch basic group info
-                self.db.collection("groups")
-                    .whereField(FieldPath.documentID(), in: chunk)
-                    .getDocuments { (snapshot, error) in
-                        if let error = error {
-                            lastError = error
-                            groupFetchGroup.leave()
-                            return
-                        }
-                        
-                        guard let groupDocs = snapshot?.documents else {
-                            groupFetchGroup.leave()
-                            return
-                        }
-                        
-                        // 2. Process each group with its additional data
-                        let innerGroup = DispatchGroup()
-                        var processedGroups: [WorkoutGroup] = []
-                        
-                        for doc in groupDocs {
-                            innerGroup.enter()
-                            
-                            let data = doc.data()
-                            let groupId = doc.documentID
-                            let role = docs.first { ($0.data()["groupId"] as? String) == groupId }?
-                                .data()["role"] as? String ?? "member"
-                            
-                            // 3. Fetch templates and members concurrently
-                            let templatesGroup = DispatchGroup()
-                            var templates: [WorkoutTemplate] = []
-                            var members: [Member] = []
-                            
-                            // Fetch templates
-                            templatesGroup.enter()
-                            self.db.collection("groups").document(groupId)
-                                .collection("templates").limit(to: 10).getDocuments { snapshot, _ in
-                                    templates = snapshot?.documents.compactMap { doc in
-                                        let data = doc.data()
-                                        return WorkoutTemplate(
-                                            id: doc.documentID,
-                                            name: data["name"] as? String ?? "",
-                                            exercises: []
-                                        )
-                                    } ?? []
-                                    templatesGroup.leave()
-                                }
-                            
-                            // Fetch members
-                            templatesGroup.enter()
-                            self.db.collection("groups").document(groupId)
-                                .collection("members").limit(to: 20).getDocuments { snapshot, _ in
-                                    members = snapshot?.documents.compactMap { doc in
-                                        let data = doc.data()
-                                        return Member(
-                                            id: doc.documentID,
-                                            name: data["name"] as? String ?? "",
-                                            profileURL: URL(string: data["profileURL"] as? String ?? ""),
-                                            role: data["role"] as? String ?? "member"
-                                        )
-                                    } ?? []
-                                    templatesGroup.leave()
-                                }
-                            
-                            templatesGroup.notify(queue: .global()) {
-                                let group = WorkoutGroup(
-                                    id: groupId,
-                                    name: data["name"] as? String ?? "Unnamed Group",
-                                    description: data["description"] as? String ?? "",
-                                    memberCount: data["memberCount"] as? Int ?? 0,
-                                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                                    isAdmin: role == "admin",
-                                    templates: templates,
-                                    members: members
-                                )
-                                processedGroups.append(group)
-                                innerGroup.leave()
-                            }
-                        }
-                        
-                        innerGroup.notify(queue: .global()) {
-                            allGroups.append(contentsOf: processedGroups)
-                            groupFetchGroup.leave()
-                        }
-                    }
-            }
-            
-            groupFetchGroup.notify(queue: .main) {
-                self.groups = allGroups.sorted { $0.createdAt > $1.createdAt }
-                dispatchGroup.leave()
-            }
-        }
+        fetchUserGroups()
+        dispatchGroup.leave()
         
         
         // 9. Process all results when complete
@@ -544,7 +421,6 @@ extension UserViewModel {
                 }
             }
     }
-    
 }
 
 

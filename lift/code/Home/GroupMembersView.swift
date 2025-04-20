@@ -27,39 +27,43 @@ struct GroupMembersView: View {
         NavigationView {
             VStack {
                 ForEach($members) { $member in
-                    HStack(spacing: 16) {
-                        if let profileURL = member.profileURL,
-                           let base64String = profileURL.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                           !base64String.isEmpty,
-                           let imageData = Data(base64Encoded: base64String),
-                           let uiImage = UIImage(data: imageData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 50, height: 50)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 1))
-                        } else {
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 50, height: 50)
-                                .foregroundColor(.gray)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(member.name)
-                                .font(.headline)
-                           
-                        }
-                        Spacer()
-
-                        if isAdmin && member.id != Auth.auth().currentUser?.uid {
-                            Button(action: {
-                                memberToRemove = member
-                                showConfirmation = true
-                            }) {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundColor(.red)
+                    NavigationLink {
+                        MemberWorkoutHistoryView(memberId: member.id)
+                    } label: {
+                        HStack(spacing: 16) {
+                            if let profileURL = member.profileURL,
+                               let base64String = profileURL.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                               !base64String.isEmpty,
+                               let imageData = Data(base64Encoded: base64String),
+                               let uiImage = UIImage(data: imageData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 1))
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 50, height: 50)
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(member.name)
+                                    .font(.headline)
+                                
+                            }
+                            Spacer()
+                            
+                            if isAdmin && member.id != Auth.auth().currentUser?.uid {
+                                Button(action: {
+                                    memberToRemove = member
+                                    showConfirmation = true
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
                             }
                         }
                     }
@@ -100,6 +104,7 @@ struct GroupMembersView: View {
             
             // Update local state
             members.removeAll { $0.id == member.id }
+            
         }
     }
 }

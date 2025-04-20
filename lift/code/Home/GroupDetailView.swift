@@ -60,6 +60,7 @@ struct GroupDetailView: View {
                 // Info Section
                 HStack {
                     Button(action: {
+                        print(group.members)
                         showMembersView = true
                     }) {
                         Label("\(group.members.count) members", systemImage: "person.3.fill")

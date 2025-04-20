@@ -13,6 +13,7 @@ import FirebaseAuth
 struct JoinGroupView: View {
     @Environment(\.dismiss) var dismiss
     
+    @State var name: String
     @State private var groupCode: String = ""
     @State private var errorMessage: String?
     @State private var isJoining = false
@@ -132,7 +133,8 @@ struct JoinGroupView: View {
                   batch.setData([
                       "userId": userId,
                       "joinedAt": FieldValue.serverTimestamp(),
-                      "role": "member"
+                      "role": "member",
+                      "name": self.name
                   ], forDocument: groupMemberRef)
                   
                   // 3. Add group to user's groups subcollection
