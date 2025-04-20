@@ -1042,10 +1042,25 @@ extension UserViewModel {
 // MARK: - Food Management
 extension UserViewModel {
     func calculateCaloricIntake() {
+        // Check if all required profile fields are present
         guard let dob = dob,
-              let age = calculateAge(from: dob)  else {
+              let _ = calculateAge(from: dob),
+              !weight.isEmpty,
+              !height.isEmpty,
+              !gender.isEmpty,
+              !activityLevel.isEmpty,
+              !goal.isEmpty else {
+            // Set to default values if any field is missing
+            goalCalories = 2000
+            goalProtein = 200
+            goalCarbs = 50
+            goalFat = 50
+            goalSugars = 20
             return
         }
+        
+        // Calculate values if all fields are present
+        let age = calculateAge(from: dob)!
         let weightKg = (Double(weight) ?? 160)*0.45359237
         let heightCm: Double = (Double(height) ?? 70)/0.3937
         let bmr: Double // basil metabolic rate
