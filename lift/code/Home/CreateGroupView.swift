@@ -19,6 +19,7 @@ struct CreateGroupView: View {
     @State private var groupCode: String = ""
     @State private var isCreating = false
     @State private var errorMessage: String?
+    @State private var everyoneCanEdit: Bool = false
 
     var body: some View {
         NavigationView {
@@ -41,7 +42,11 @@ struct CreateGroupView: View {
                         let filtered = newValue.uppercased().filter { $0.isLetter || $0.isNumber }
                         groupCode = String(filtered.prefix(8))
                     }
-
+                
+                Toggle("Everyone Can Edit", isOn: $everyoneCanEdit)
+                    .padding(.horizontal)
+                    .toggleStyle(SwitchToggleStyle(tint: .pink))
+                
                 if let error = errorMessage {
                     Text(error)
                         .foregroundColor(.red)
@@ -124,7 +129,8 @@ struct CreateGroupView: View {
                 "code": groupCode,
                 "createdAt": Timestamp(date: Date()),
                 "ownerId": userId,
-                "memberCount": 1
+                "memberCount": 1,
+                "everyoneCanEdit": everyoneCanEdit
             ]
             
             var groupRef: DocumentReference?

@@ -88,7 +88,7 @@ class UserViewModel: ObservableObject {
                 print("Initial load error: \(error.localizedDescription)")
                 return
             }
-            // Optional: Update UI state
+            // Update UI state
             DispatchQueue.main.async {
                 self.isLoading = false
             }
@@ -210,17 +210,17 @@ extension UserViewModel {
         }
         
         // 7. Fetch custom foods
-        dispatchGroup.enter()
-        customFoodsRef.order(by: "name").limit(to: 20).getDocuments { snapshot, error in
-            if let error = error {
-                lastError = error
-            } else {
-                customFoods = snapshot?.documents.compactMap { doc in
-                    try? doc.data(as: FoodItem.self)
-                } ?? []
-            }
-            dispatchGroup.leave()
-        }
+//        dispatchGroup.enter()
+//        customFoodsRef.order(by: "name").limit(to: 20).getDocuments { snapshot, error in
+//            if let error = error {
+//                lastError = error
+//            } else {
+//                customFoods = snapshot?.documents.compactMap { doc in
+//                    try? doc.data(as: FoodItem.self)
+//                } ?? []
+//            }
+//            dispatchGroup.leave()
+//        }
         
         // 8. Fetch user's group IDs and group deatils
         dispatchGroup.enter()
@@ -817,18 +817,22 @@ extension UserViewModel {
                             let userRole = userGroups.first { $0.groupId == groupId }?.role ?? "member"
                             let name = data["name"] as? String ?? "Unnamed Group"
                             let description = data["description"] as? String ?? ""
+                            let code = data["code"] as? String ?? ""
                             let memberCount = data["memberCount"] as? Int ?? 1
                             let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                            let everyoneCanEdit = data["everyoneCanEdit"] as? Bool ?? false
 
                             var workoutGroup = WorkoutGroup(
                                 id: groupId,
                                 name: name,
                                 description: description,
+                                code: code,
                                 memberCount: memberCount,
                                 createdAt: createdAt,
                                 isAdmin: userRole == "admin",
                                 templates: [],
-                                members: []
+                                members: [],
+                                everyoneCanEdit: everyoneCanEdit
                             )
 
                             dispatchGroup.enter()

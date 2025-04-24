@@ -185,6 +185,8 @@ struct MyTemplatesView: View {
     @Binding var showWorkoutView: Bool
     @Binding var selectedWorkoutTitle: String
     @Binding var selectedExercises: [Exercise]
+    
+    @State var showTemplateAlert: Bool = false
 
     var body: some View {
         VStack(alignment: .center, spacing: 10) {
@@ -206,9 +208,13 @@ struct MyTemplatesView: View {
                 }
 
                 Button {
-                    selectedWorkoutTitle = "New Template"
-                    selectedExercises = []
-                    showWorkoutView.toggle()
+                    if viewModel.templates.count < 5 {
+                        selectedWorkoutTitle = "New Template"
+                        selectedExercises = []
+                        showWorkoutView.toggle()
+                    } else {
+                        showTemplateAlert = true
+                    }
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle")
@@ -219,6 +225,11 @@ struct MyTemplatesView: View {
                     .padding(.vertical, 6)
                     .background(Color.pink.opacity(0.1))
                     .cornerRadius(10)
+                }
+                .alert("Template Limit Reached", isPresented: $showTemplateAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("You can only join up to 5 tempalte. Please delete an existing template before making a new one.")
                 }
             }
             .padding(.horizontal)
@@ -280,6 +291,9 @@ struct MyGroupsView: View {
     @Binding var selectedGroup: WorkoutGroup?
     @Binding var showJoinGroup: Bool
     @Binding var showCreateGroup: Bool
+    
+    @State private var showGroupLimitAlert = false
+
 
     @Environment(\.colorScheme) var colorScheme
 
@@ -291,7 +305,12 @@ struct MyGroupsView: View {
                     .fontWeight(.semibold)
                 Spacer()
                 Button {
-                    showJoinGroup = true
+                    print(viewModel.groups.count)
+                    if viewModel.groups.count < 2 {
+                        showJoinGroup = true
+                    } else {
+                        showGroupLimitAlert = true
+                    }
                 } label: {
                     HStack {
                         Image(systemName: "person.badge.plus")
@@ -303,9 +322,18 @@ struct MyGroupsView: View {
                     .background(Color.pink.opacity(0.1))
                     .cornerRadius(10)
                 }
+                .alert("Group Limit Reached", isPresented: $showGroupLimitAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("You can only join up to 2 groups. Please leave an existing group before joining a new one.")
+                }
 
                 Button {
-                    showCreateGroup = true
+                    if viewModel.groups.count < 2 {
+                        showCreateGroup = true
+                    } else {
+                        showGroupLimitAlert = true
+                    }
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle")
@@ -316,6 +344,11 @@ struct MyGroupsView: View {
                     .padding(.vertical, 6)
                     .background(Color.pink.opacity(0.1))
                     .cornerRadius(10)
+                }
+                .alert("Group Limit Reached", isPresented: $showGroupLimitAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("You can only join up to 2 groups. Please leave an existing group before joining a new one.")
                 }
             }
             .padding(.horizontal)

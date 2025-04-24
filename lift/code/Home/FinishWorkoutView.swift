@@ -36,12 +36,7 @@ struct FinishWorkoutView: View {
                     .padding(.horizontal)
                 }
                 .frame(maxHeight: 200)
-                
-                Text("Finish Workout?")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .padding(.top)
-                
+                                
                 VStack(spacing: 12) {
                     Button(action: {
                         onSaveWorkout()
@@ -49,25 +44,16 @@ struct FinishWorkoutView: View {
                     }) {
                         HStack {
                             Image(systemName: "checkmark.circle")
-                            Text("Save Template and Update Values")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            Text("Finish Workout")
+                                .font(.title2)
+                                .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
+                        .padding()
                     }
                     .buttonStyle(.borderedProminent)
-                    
-                    
-//                    Button(action: {
-//                        onSaveTemplate()
-//                        onSaveWorkout()
-//                        isPresented = false
-//                    }) {
-//                        HStack {
-//                            Image(systemName: "square.and.arrow.down")
-//                            Text("Update Values Only")
-//                        }
-//                        .frame(maxWidth: .infinity)
-//                    }
-//                    .buttonStyle(.bordered)
                 }
             }
             Button(action: {

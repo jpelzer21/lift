@@ -54,7 +54,7 @@ struct MemberWorkoutHistoryView: View {
         print("FETCHING MEMBER WORKOUT HISTORY FOR: \(memberId)")
         
         let db = Firestore.firestore()
-        let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+//        let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         
         db.collection("users").document(memberId).collection("workouts")
             .limit(to: 7)

@@ -7,22 +7,12 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedIndex: Int = 0
+    @State private var selectedIndex: Int = 1
     @StateObject private var userViewModel = UserViewModel.shared
 
     var body: some View {
         TabView(selection: $selectedIndex) {
-            NavigationStack {
-                HomePageView()
-                    .navigationTitle("Home")
-            }
-            .tabItem {
-                Text("Home")
-                Image(systemName: "house.fill")
-                    .renderingMode(.template)
-            }
-            .tag(0)
-            .environmentObject(userViewModel)
+            
             
             
             NavigationStack() {
@@ -33,9 +23,21 @@ struct ContentView: View {
                 Text("Nutrition")
                 Image(systemName: "fork.knife.circle")
             }
-            .tag(1)
+            .tag(0)
             .environmentObject(userViewModel)
 
+            
+            NavigationStack {
+                HomePageView()
+                    .navigationTitle("Home")
+            }
+            .tabItem {
+                Text("Home")
+                Image(systemName: "dumbbell.fill")
+                    .renderingMode(.template)
+            }
+            .tag(1)
+            .environmentObject(userViewModel)
             
             
             NavigationStack() {

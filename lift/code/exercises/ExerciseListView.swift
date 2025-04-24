@@ -94,7 +94,13 @@ struct ExerciseListView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(viewModel.exercises, id: \.name) { exercise in
-                            NavigationLink(destination: GraphView(exerciseName: exercise.name)) {
+                            NavigationLink(destination: {
+                                if !isDeleting {
+                                    AnyView(GraphView(exerciseName: exercise.name))
+                                } else {
+                                    AnyView(EditExerciseView(exerciseName: exercise.name))
+                                }
+                            }) {
                                 ExerciseCard(
                                     exerciseName: exercise.name,
                                     setCount: exercise.setCount,

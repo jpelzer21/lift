@@ -25,6 +25,9 @@ struct GroupDetailView: View {
     @State private var showTemplatePicker = false
     @State private var showMembersView = false
     
+    @State private var showCopiedAlert = false
+
+    
     private var isAdmin: Bool {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return false }
             if let member = group.members.first(where: { $0.id == currentUserId }) {
@@ -75,6 +78,54 @@ struct GroupDetailView: View {
                 }
                 .font(.subheadline)
                 .foregroundColor(.gray)
+                   
+                
+                Divider()
+                
+                
+                
+                
+                // Group Code Section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("GROUP CODE")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 2)
+                    
+                    HStack {
+                        Text(group.code)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Button(action: copyCodeToClipboard) {
+                            HStack(spacing: 6) {
+                                Image(systemName: showCopiedAlert ? "checkmark" : "doc.on.doc")
+                                Text(showCopiedAlert ? "Copied!" : "Copy")
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(showCopiedAlert ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+                            .foregroundColor(showCopiedAlert ? .green : .blue)
+                            .cornerRadius(8)
+                            .animation(.easeInOut(duration: 0.2), value: showCopiedAlert)
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                    )
+                }
                 
                 Divider()
                 
@@ -84,7 +135,7 @@ struct GroupDetailView: View {
                         .font(.headline)
                         .fontWeight(.semibold)
                     Spacer()
-                    if isAdmin {
+                    if isAdmin || group.everyoneCanEdit {
                         Button(action: {
                             showTemplatePicker = true
                         }) {
@@ -110,7 +161,7 @@ struct GroupDetailView: View {
                                             showWorkoutView.toggle()
                                         },
                                         onDelete: {
-                                            if isAdmin {
+                                            if isAdmin || group.everyoneCanEdit {
                                                 deleteTemplate(template)
                                             }
                                         })
@@ -173,6 +224,24 @@ struct GroupDetailView: View {
         .sheet(isPresented: $showTemplatePicker) {
             TemplatePickerView(templates: viewModel.templates) { selectedTemplate in
                 addTemplateToGroup(selectedTemplate)
+            }
+        }
+    }
+    
+    private func copyCodeToClipboard() {
+        UIPasteboard.general.string = group.code
+        
+        // Haptic feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // Visual feedback
+        showCopiedAlert = true
+        
+        // Reset after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showCopiedAlert = false
             }
         }
     }

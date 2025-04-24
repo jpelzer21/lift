@@ -88,13 +88,6 @@ struct EditExerciseView: View {
                     .padding(.bottom, 50)
                 }
                 .navigationTitle("Edit Exercise")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                    }
-                }
                 .alert(isPresented: $showingAlert) {
                     Alert(title: Text("Error"), message: Text("message"), dismissButton: .default(Text("OK")))
                 }

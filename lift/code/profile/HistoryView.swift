@@ -6,6 +6,10 @@ struct HistoryView: View {
     @State private var workouts: [(id: String, title: String, date: Date, exercises: [String])] = []
     @State private var isLoading = true
     
+    @State private var lastDocument: DocumentSnapshot? = nil
+    @State private var isLoadingMore = false
+    private let pageSize = 5
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -31,49 +35,86 @@ struct HistoryView: View {
                             ForEach(workouts, id: \.id) { workout in
                                 WorkoutCard(workout: workout)
                             }
+                            if !isLoading && lastDocument != nil {
+                                Button(action: {
+                                    fetchWorkoutHistory(isInitial: false)
+                                }) {
+                                    if isLoadingMore {
+                                        ProgressView()
+                                    } else {
+                                        Text("Load More")
+                                            .font(.subheadline)
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 20)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                    }
+                                }
+                                .padding()
+                            }
                         }
                         .padding()
                     }
                 }
             }
             .navigationTitle("Workout History")
-            .onAppear(perform: fetchWorkoutHistory)
+            .onAppear {
+                fetchWorkoutHistory(isInitial: true)
+            }
         }
     }
     
-    private func fetchWorkoutHistory() {
-        print("FETCH WORKOUT HISTORY() CALLED")
+    private func fetchWorkoutHistory(isInitial: Bool = true) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
-        db.collection("users").document(userID).collection("workouts")
+        var query: Query = db.collection("users").document(userID).collection("workouts")
             .order(by: "timestamp", descending: true)
-            .getDocuments { snapshot, error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        print("Error fetching workouts: \(error.localizedDescription)")
-                        self.workouts = []
-                    } else {
-                        self.workouts = snapshot?.documents.compactMap { doc in
-                            let id = doc.documentID  // Unique workout ID
-                            let title = doc["title"] as? String ?? "No Title"
-                            let timestamp = (doc["timestamp"] as? Timestamp)?.dateValue() ?? Date()
-                            
-                            // Extract exercises with sets and reps
-                            let exercisesArray = doc["exercises"] as? [[String: Any]] ?? []
-                            let formattedExercises = exercisesArray.compactMap { exercise -> String? in
-                                guard let name = exercise["name"] as? String,
-                                      let sets = exercise["sets"] as? Int,
-                                      let reps = exercise["reps"] as? Int else { return nil }
-                                return "\(sets)x\(reps) \(name)"  // Format as "3x8 Bench Press"
-                            }
-                            
-                            return (id, title, timestamp, formattedExercises)
-                        } ?? []
+            .limit(to: pageSize)
+        
+        if let lastDoc = lastDocument, !isInitial {
+            query = query.start(afterDocument: lastDoc)
+        }
+
+        if isInitial {
+            isLoading = true
+        } else {
+            isLoadingMore = true
+        }
+        
+        query.getDocuments { snapshot, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error fetching workouts: \(error.localizedDescription)")
+                    if isInitial { self.workouts = [] }
+                } else if let snapshot = snapshot {
+                    let newWorkouts = snapshot.documents.compactMap { doc -> (String, String, Date, [String])? in
+                        let id = doc.documentID
+                        let title = doc["title"] as? String ?? "No Title"
+                        let timestamp = (doc["timestamp"] as? Timestamp)?.dateValue() ?? Date()
+                        let exercisesArray = doc["exercises"] as? [[String: Any]] ?? []
+                        let formattedExercises = exercisesArray.compactMap { exercise -> String? in
+                            guard let name = exercise["name"] as? String,
+                                  let sets = exercise["sets"] as? Int,
+                                  let reps = exercise["reps"] as? Int else { return nil }
+                            return "\(sets)x\(reps) \(name)"
+                        }
+                        return (id, title, timestamp, formattedExercises)
                     }
-                    self.isLoading = false
+                    
+                    if isInitial {
+                        workouts = newWorkouts
+                    } else {
+                        workouts.append(contentsOf: newWorkouts)
+                    }
+
+                    lastDocument = snapshot.documents.last
                 }
+
+                isLoading = false
+                isLoadingMore = false
             }
+        }
     }
 }
 

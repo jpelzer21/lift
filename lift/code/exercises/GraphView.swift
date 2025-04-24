@@ -85,14 +85,14 @@ struct GraphView: View {
                     .padding(.horizontal, 20)
                     
                     HStack {
-                        Button(action: {
-                            showEditExerciseView = true
-                        }) {
-                            Image(systemName: "pencil")
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.horizontal, 20)
+//                        Button(action: {
+//                            showEditExerciseView = true
+//                        }) {
+//                            Image(systemName: "pencil")
+//                                .font(.title2)
+//                                .foregroundColor(.blue)
+//                        }
+//                        .padding(.horizontal, 20)
                         Spacer()
                         Button(action: {
                             showInfo = true

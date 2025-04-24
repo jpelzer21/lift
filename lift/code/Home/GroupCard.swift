@@ -127,18 +127,20 @@ struct WorkoutGroup: Identifiable {
     var id: String
     let name: String
     let description: String
+    let code: String
     let memberCount: Int
     let createdAt: Date
     let isAdmin: Bool
     var templates: [WorkoutTemplate]
     var members: [Member]
+    let everyoneCanEdit: Bool
 }
 
 struct Member: Identifiable {
     var id: String
     let name: String
-    let profileURL: URL?
-    let role: String
+    var profileURL: URL?
+    var role: String
 }
 
 struct WorkoutTemplate: Identifiable, Codable {
