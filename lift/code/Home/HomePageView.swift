@@ -122,7 +122,7 @@ struct HomePageView: View {
         }
         .navigationTitle("Home")
         .fullScreenCover(isPresented: $showWorkoutView, onDismiss: {
-            if !didFinishWorkout && inProgressWorkout == nil {
+            if !didFinishWorkout {
                 inProgressWorkout = WorkoutSession(id: UUID(), title: selectedWorkoutTitle, exercises: selectedExercises)
             }
             viewModel.fetchTemplatesRealtime()

@@ -137,7 +137,7 @@ extension UserViewModel {
         let templatesRef = userRef.collection("templates").limit(to: 20)
         let workoutsRef = userRef.collection("workouts").limit(to: 30)
         let exercisesRef = userRef.collection("exercises").limit(to: 100)
-        let customFoodsRef = userRef.collection("customFoods").limit(to: 50)
+//        let customFoodsRef = userRef.collection("customFoods").limit(to: 50)
 //        let userGroupsRef = userRef.collection("groups").limit(to: 10)
         
         // 2. Create batch get request
@@ -146,7 +146,7 @@ extension UserViewModel {
         var templates: [WorkoutTemplate] = []
         var workedOutDates: [Date] = []
         var exercises: [Exercise] = []
-        var customFoods: [FoodItem] = []
+//        var customFoods: [FoodItem] = []
 //        var groupIDs: [(id: String, role: String)] = []
         var lastError: Error?
         
@@ -248,7 +248,7 @@ extension UserViewModel {
             self.templates = templates
             self.workedOutDates = workedOutDates
             self.userExercises = exercises
-            self.customFoods = customFoods
+//            self.customFoods = self.customFoods
             
             // Now setup realtime listeners for updates
             self.setupRealtimeListener()

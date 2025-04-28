@@ -270,45 +270,60 @@ struct GraphView: View {
                 if barType == "BodyWeight" {
                     self.selectedMetric = .reps
                 }
-            } else {
-                print("barType field is missing or not a String")
             }
         }
+        
+        // Calculate date thresholds
+        let calendar = Calendar.current
+        let now = Date()
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -30, to: now)!
         
         // Remove any existing listener to avoid duplicates
         self.listener?.remove()
         
         // Add snapshot listener for sets collection
-        self.listener = exerciseRef.collection("sets").order(by: "date").addSnapshotListener { snapshot, error in
-            DispatchQueue.main.async {
-                self.isLoading = false
-                
-                if let error = error {
-                    print("Error listening to sets: \(error.localizedDescription)")
-                    self.exerciseSets = []
-                    return
+        self.listener = exerciseRef.collection("sets")
+            .order(by: "date")
+            .addSnapshotListener { snapshot, error in
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    
+                    if let error = error {
+                        print("Error listening to sets: \(error.localizedDescription)")
+                        self.exerciseSets = []
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("No sets found for \(name)")
+                        self.exerciseSets = []
+                        return
+                    }
+                    
+                    // Process all documents
+                    let allSets = documents.compactMap { doc -> ExerciseSet? in
+                        let data = doc.data()
+                        let set = ExerciseSet(
+                            number: data["setNum"] as? Int ?? 1,
+                            weight: data["weight"] as? Double ?? 0,
+                            reps: data["reps"] as? Int ?? 0,
+                            date: (data["date"] as? Timestamp)?.dateValue() ?? Date()
+                        )
+                        return set
+                    }
+                    
+                    // Filter sets:
+                    // 1. Keep all sets from last 7 days
+                    // 2. For older dates, keep only first sets (setNum == 1)
+                    self.exerciseSets = allSets.filter { set in
+                        let isRecent = set.date > sevenDaysAgo
+                        let isFirstSet = set.number == 1
+                        return isRecent || isFirstSet
+                    }
+                    
+                    print("Loaded \(self.exerciseSets.count) filtered sets (showing all recent sets + first sets for older dates).")
                 }
-                
-                guard let documents = snapshot?.documents else {
-                    print("No sets found for \(name)")
-                    self.exerciseSets = []
-                    return
-                }
-                
-                self.exerciseSets = documents.compactMap { doc in
-                    let data = doc.data()
-                    let set = ExerciseSet(
-                        number: data["setNum"] as? Int ?? 1,
-                        weight: data["weight"] as? Double ?? 0,
-                        reps: data["reps"] as? Int ?? 0,
-                        date: (data["date"] as? Timestamp)?.dateValue() ?? Date()
-                    )
-                    return set
-                }
-                
-                print("Loaded \(self.exerciseSets.count) sets.")
             }
-        }
     }
 }
 

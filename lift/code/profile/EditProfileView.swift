@@ -165,20 +165,22 @@ struct EditProfileView: View {
                     }
                 }
 
-                // Move the button outside the Form
-                Button(action: {
-                    saveChanges()
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Text("Save Changes")
-                        .contentShape(Rectangle())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                        .padding()
+                ZStack {
+                    Button(action: {
+                        saveChanges()
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Text("Save Changes")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .contentShape(Rectangle())
+                    .background(Color.clear)
                 }
+                .padding()
             }
             .navigationTitle("Edit Profile")
         }
