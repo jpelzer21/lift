@@ -12,6 +12,7 @@ struct ProfileView: View {
     
     // State variables
     @State private var showingLogoutAlert = false
+    @State private var showingDeleteAlert = false
     @State private var weightEntries: [WeightEntry] = []
     
     // UI Constants
@@ -21,7 +22,7 @@ struct ProfileView: View {
     
     var body: some View {
         VStack {
-//            ScrollView {
+            ScrollView {
                 VStack(spacing: sectionSpacing) {
                     // Profile Header
                     profileHeaderSection
@@ -36,7 +37,7 @@ struct ProfileView: View {
                     accountSection
                 }
                 .padding(.vertical)
-//            }
+            }
         }
         .navigationTitle("Profile")
     }
@@ -192,6 +193,24 @@ struct ProfileView: View {
                         secondaryButton: .cancel()
                     )
                 }
+                
+                Divider()
+                    .padding(.leading, 52)
+
+                // Delete Account Button
+                Button(action: {
+                    showingDeleteAlert = true
+                }) {
+                    settingsRow(title: "Delete Account", icon: "trash.fill", color: .red)
+                }
+                .alert(isPresented: $showingDeleteAlert) {
+                    Alert(
+                        title: Text("Delete Account?"),
+                        message: Text("This action is permanent and cannot be undone."),
+                        primaryButton: .destructive(Text("Delete"), action: deleteAccount),
+                        secondaryButton: .cancel()
+                    )
+                }
             }
             .background(
                 RoundedRectangle(cornerRadius: cardCornerRadius)
@@ -281,6 +300,64 @@ struct ProfileView: View {
             }
         } catch {
             print("❌ Error signing out: \(error.localizedDescription)")
+        }
+    }
+    
+    private func deleteAccount() {
+        signOut()
+        guard let user = Auth.auth().currentUser else { return }
+        let uid = user.uid
+        let db = Firestore.firestore()
+        
+        // Step 1: Delete Firestore user document and subcollections
+        let userRef = db.collection("users").document(uid)
+        
+        // Step 1a: Delete subcollections like workouts, templates, exercises, etc.
+        func deleteSubcollections(completion: @escaping () -> Void) {
+            let subcollections = ["workouts", "templates", "exercises", "measurements"]
+            let dispatchGroup = DispatchGroup()
+            
+            for sub in subcollections {
+                dispatchGroup.enter()
+                userRef.collection(sub).getDocuments { snapshot, error in
+                    if let documents = snapshot?.documents {
+                        for doc in documents {
+                            doc.reference.delete()
+                        }
+                    }
+                    dispatchGroup.leave()
+                }
+            }
+            
+            dispatchGroup.notify(queue: .main) {
+                completion()
+            }
+        }
+        
+        deleteSubcollections {
+            // Step 1b: Delete the main user document
+            userRef.delete { error in
+                if let error = error {
+                    print("❌ Error deleting Firestore user data: \(error.localizedDescription)")
+                    return
+                }
+
+                // Step 2: Delete Firebase Auth account
+                user.delete { error in
+                    if let error = error {
+                        print("❌ Error deleting auth account: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Account and data deleted")
+                        UserViewModel.shared.resetUserData()
+                        
+                        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = scene.windows.first {
+                            window.rootViewController = UIHostingController(rootView: LoginView())
+                            window.makeKeyAndVisible()
+                        }
+                    }
+                }
+            }
         }
     }
 }
