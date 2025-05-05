@@ -73,13 +73,10 @@ struct EditProfileView: View {
                                     .overlay(Circle().stroke(Color.blue.opacity(0.2), lineWidth: 2))
                             }
                         }
-                        HStack {
-                            Button("Choose Photo") {
-                                imagePickerSource = .photoLibrary
-                                showImagePicker = true
-                            }
+                        Button("Choose Photo") {
+                            imagePickerSource = .photoLibrary
+                            showImagePicker = true
                         }
-                        .padding(.bottom, 10)
                     }
                     Spacer()
                 }
@@ -183,9 +180,6 @@ struct EditProfileView: View {
                 .padding()
             }
             .navigationTitle("Edit Profile")
-        }
-        .onTapGesture { // Dismiss the keyboard when tapping anywhere on the screen
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: $profileImage, sourceType: imagePickerSource)

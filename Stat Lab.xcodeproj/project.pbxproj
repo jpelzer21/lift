@@ -17,16 +17,16 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D7126E272D68144B00568AA9 /* lift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lift.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7126E272D68144B00568AA9 /* Stat Lab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Stat Lab.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D72DCD762D8E0E7A00E82C8D /* Exceptions for "lift" folder in "lift" target */ = {
+		D72DCD762D8E0E7A00E82C8D /* Exceptions for "lift" folder in "Stat Lab" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = D7126E262D68144B00568AA9 /* lift */;
+			target = D7126E262D68144B00568AA9 /* Stat Lab */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -34,7 +34,7 @@
 		D7126E292D68144B00568AA9 /* lift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				D72DCD762D8E0E7A00E82C8D /* Exceptions for "lift" folder in "lift" target */,
+				D72DCD762D8E0E7A00E82C8D /* Exceptions for "lift" folder in "Stat Lab" target */,
 			);
 			path = lift;
 			sourceTree = "<group>";
@@ -71,7 +71,7 @@
 		D7126E282D68144B00568AA9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D7126E272D68144B00568AA9 /* lift.app */,
+				D7126E272D68144B00568AA9 /* Stat Lab.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,9 +86,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D7126E262D68144B00568AA9 /* lift */ = {
+		D7126E262D68144B00568AA9 /* Stat Lab */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D7126E3A2D68144B00568AA9 /* Build configuration list for PBXNativeTarget "lift" */;
+			buildConfigurationList = D7126E3A2D68144B00568AA9 /* Build configuration list for PBXNativeTarget "Stat Lab" */;
 			buildPhases = (
 				D7126E232D68144B00568AA9 /* Sources */,
 				D7126E242D68144B00568AA9 /* Frameworks */,
@@ -127,7 +127,7 @@
 			fileSystemSynchronizedGroups = (
 				D7126E292D68144B00568AA9 /* lift */,
 			);
-			name = lift;
+			name = "Stat Lab";
 			packageProductDependencies = (
 				D7126E512D6A32E900568AA9 /* FirebaseAnalytics */,
 				D7126E562D6A3AF900568AA9 /* FirebaseAuth */,
@@ -138,7 +138,7 @@
 				D72DCD732D8E0E3200E82C8D /* GoogleSignInSwift */,
 			);
 			productName = lift;
-			productReference = D7126E272D68144B00568AA9 /* lift.app */;
+			productReference = D7126E272D68144B00568AA9 /* Stat Lab.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -156,7 +156,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D7126E222D68144B00568AA9 /* Build configuration list for PBXProject "lift" */;
+			buildConfigurationList = D7126E222D68144B00568AA9 /* Build configuration list for PBXProject "Stat Lab" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -174,7 +174,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D7126E262D68144B00568AA9 /* lift */,
+				D7126E262D68144B00568AA9 /* Stat Lab */,
 			);
 		};
 /* End PBXProject section */
@@ -504,7 +504,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D7126E222D68144B00568AA9 /* Build configuration list for PBXProject "lift" */ = {
+		D7126E222D68144B00568AA9 /* Build configuration list for PBXProject "Stat Lab" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D7126E382D68144B00568AA9 /* Debug */,
@@ -513,7 +513,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D7126E3A2D68144B00568AA9 /* Build configuration list for PBXNativeTarget "lift" */ = {
+		D7126E3A2D68144B00568AA9 /* Build configuration list for PBXNativeTarget "Stat Lab" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D7126E3B2D68144B00568AA9 /* Debug */,

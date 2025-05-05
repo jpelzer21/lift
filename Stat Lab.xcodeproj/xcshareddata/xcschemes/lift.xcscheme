@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D7126E262D68144B00568AA9"
-               BuildableName = "lift.app"
-               BlueprintName = "lift"
-               ReferencedContainer = "container:lift.xcodeproj">
+               BuildableName = "Stat Lab.app"
+               BlueprintName = "Stat Lab"
+               ReferencedContainer = "container:Stat Lab.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D7126E262D68144B00568AA9"
-            BuildableName = "lift.app"
-            BlueprintName = "lift"
-            ReferencedContainer = "container:lift.xcodeproj">
+            BuildableName = "Stat Lab.app"
+            BlueprintName = "Stat Lab"
+            ReferencedContainer = "container:Stat Lab.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D7126E262D68144B00568AA9"
-            BuildableName = "lift.app"
-            BlueprintName = "lift"
-            ReferencedContainer = "container:lift.xcodeproj">
+            BuildableName = "Stat Lab.app"
+            BlueprintName = "Stat Lab"
+            ReferencedContainer = "container:Stat Lab.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
