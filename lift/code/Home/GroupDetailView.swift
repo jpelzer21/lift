@@ -86,45 +86,47 @@ struct GroupDetailView: View {
                 
                 
                 // Group Code Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("GROUP CODE")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 2)
-                    
-                    HStack {
-                        Text(group.code)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .monospacedDigit()
-                            .foregroundColor(.primary)
+                if isAdmin {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("GROUP CODE")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 2)
                         
-                        Spacer()
-                        
-                        Button(action: copyCodeToClipboard) {
-                            HStack(spacing: 6) {
-                                Image(systemName: showCopiedAlert ? "checkmark" : "doc.on.doc")
-                                Text(showCopiedAlert ? "Copied!" : "Copy")
-                                    .fontWeight(.medium)
+                        HStack {
+                            Text(group.code)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Button(action: copyCodeToClipboard) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: showCopiedAlert ? "checkmark" : "doc.on.doc")
+                                    Text(showCopiedAlert ? "Copied!" : "Copy")
+                                        .fontWeight(.medium)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(showCopiedAlert ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+                                .foregroundColor(showCopiedAlert ? .green : .blue)
+                                .cornerRadius(8)
+                                .animation(.easeInOut(duration: 0.2), value: showCopiedAlert)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(showCopiedAlert ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
-                            .foregroundColor(showCopiedAlert ? .green : .blue)
-                            .cornerRadius(8)
-                            .animation(.easeInOut(duration: 0.2), value: showCopiedAlert)
                         }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                )
+                        )
                     }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
-                            )
-                    )
                 }
                 
                 Divider()

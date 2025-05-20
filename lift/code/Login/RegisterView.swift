@@ -4,16 +4,20 @@
 //
 //  Created by Josh Pelzer on 5/18/25.
 //
+import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
-
-struct RegistrationView: View {
+struct RegisterView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var userViewModel: UserViewModel
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var showOnboarding = false
     
     var isSignUpDisabled: Bool {
         return firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -23,57 +27,59 @@ struct RegistrationView: View {
     }
     
     var body: some View {
-        VStack {
-            Text("Create an Account")
-                .font(.largeTitle)
-                .bold()
-                .padding(.bottom, 20)
-            
-            TextField("First Name", text: $firstName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .autocapitalization(.words)
-                .padding(.horizontal)
-            
-            TextField("Last Name", text: $lastName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .autocapitalization(.words)
-                .padding(.horizontal)
-            
-            TextField("Email", text: $email)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .autocapitalization(.none)
-                .keyboardType(.emailAddress)
-                .padding(.horizontal)
-            
-            SecureField("Password", text: $password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
-            
-            if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-                    .font(.caption)
-                    .padding()
-            }
-            
-            Button(action: register) {
-                Text(isLoading ? "Creating Account..." : "Sign Up")
+        NavigationStack {
+            VStack {
+                Text("Create an Account")
+                    .font(.largeTitle)
                     .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isSignUpDisabled ? Color.gray.opacity(0.5) : Color.pink)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .padding(.bottom, 20)
+                
+                TextField("First Name", text: $firstName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocapitalization(.words)
+                    .padding(.horizontal)
+                
+                TextField("Last Name", text: $lastName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocapitalization(.words)
+                    .padding(.horizontal)
+                
+                TextField("Email", text: $email)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocapitalization(.none)
+                    .keyboardType(.emailAddress)
+                    .padding(.horizontal)
+                
+                SecureField("Password", text: $password)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                        .padding()
+                }
+                
+                Button(action: register) {
+                    Text(isLoading ? "Creating Account..." : "Sign Up")
+                        .bold()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isSignUpDisabled ? Color.gray.opacity(0.5) : Color.pink)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                .padding()
+                .disabled(isSignUpDisabled)
             }
             .padding()
-            .disabled(isSignUpDisabled)
-            
-            Button(action: { dismiss() }) {
-                Text("Already have an account? Sign In")
-                    .foregroundColor(.pink)
+            .navigationDestination(isPresented: $showOnboarding) {
+                UserOnboardingView(onComplete: {
+                    dismiss() // This will dismiss both onboarding and registration
+                })
             }
         }
-        .padding()
     }
     
     func register() {
@@ -85,7 +91,9 @@ struct RegistrationView: View {
                 self.errorMessage = error.localizedDescription
             } else if let user = result?.user {
                 self.saveUserData(user: user)
-                dismiss()
+                // Set this to true to trigger navigation to onboarding
+                self.showOnboarding = true
+                // REMOVE the dismiss() call here
             }
         }
     }

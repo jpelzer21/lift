@@ -6,7 +6,7 @@ import FirebaseAuth
 struct GraphView: View {
 //    @State private var viewModel: ExerciseViewModel
     @State private var exerciseSets: [ExerciseSet] = []
-    @State private var selectedMetric: Metric = .volume
+    @State private var selectedMetric: Metric = .weight
     @State private var isLoading = true
     @State private var showInfo = false
     @State private var showEditExerciseView = false

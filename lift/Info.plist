@@ -16,6 +16,8 @@
 	<key>GIDClientID</key>
 	<string>1079283597364-avl6ub7ul8fjjff4tj7avubsqtcu2n24.apps.googleusercontent.com</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Your camera can be used to scan food items. </string>
+	<string>This app uses the camera to identify food items</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires access to the photo library to upload your profile photo</string>
 </dict>
 </plist>

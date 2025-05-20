@@ -1,43 +1,80 @@
+import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
+
 struct UserOnboardingView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var viewModel = UserOnboardingViewModel()
+    
+    // Personal Information
+    @State private var gender: Gender = .male
+    @State private var birthDateString: String = ""
+    @State private var heightFeet: Int = 0
+    @State private var heightInches: Int = 0
+    @State private var weight: String = ""
+    @State private var dobError: String?
+    
+    // Activity Level
+    @State private var activityLevel: ActivityLevel = .moderatelyActive
+    
+    // Goal
+    @State private var goal: Goal = .maintain
+    
+    // UI Options
+    let feetOptions = Array(3...7)
+    let inchesOptions = Array(0...11)
+    
+    var onComplete: () -> Void
     
     var body: some View {
         NavigationStack {
             Form {
                 Section(header: Text("Personal Information")) {
-                    Picker("Gender", selection: $viewModel.gender) {
+                    Picker("Gender", selection: $gender) {
                         ForEach(Gender.allCases, id: \.self) { gender in
                             Text(gender.rawValue.capitalized)
                         }
                     }
                     
-                    DatePicker("Date of Birth", selection: $viewModel.birthDate, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
+                    TextField("Date of Birth (MM/DD/YYYY)", text: $birthDateString)
+                        .foregroundColor(dobError != nil ? .red : .primary)
+                        .onChange(of: birthDateString) { oldValue, newValue in
+                            formatBirthDateInput()
+                            _ = parseBirthDate()
+                        }
+
+                    if let dobError = dobError {
+                        Text(dobError)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                     
                     HStack {
                         Text("Height")
                         Spacer()
-                        TextField("cm", value: $viewModel.height, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                        Text("cm")
+                        Picker("Feet", selection: $heightFeet) {
+                            ForEach(feetOptions, id: \.self) { feet in
+                                Text("\(feet) ft")
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Picker("Inches", selection: $heightInches) {
+                            ForEach(inchesOptions, id: \.self) { inches in
+                                Text("\(inches) in")
+                            }
+                        }
+                        .pickerStyle(.menu)
                     }
                     
-                    HStack {
-                        Text("Weight")
-                        Spacer()
-                        TextField("kg", value: $viewModel.weight, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                        Text("kg")
-                    }
+                    TextField("Weight (lbs)", text: $weight)
+                        .keyboardType(.decimalPad)
+                        .onChange(of: weight) { oldValue, newValue in
+                            formatWeightInput()
+                        }
                 }
                 
                 Section(header: Text("Activity Level")) {
-                    Picker("Activity Level", selection: $viewModel.activityLevel) {
+                    Picker("Activity Level", selection: $activityLevel) {
                         ForEach(ActivityLevel.allCases, id: \.self) { level in
                             Text(level.description)
                         }
@@ -45,7 +82,7 @@ struct UserOnboardingView: View {
                 }
                 
                 Section(header: Text("Goal")) {
-                    Picker("Primary Goal", selection: $viewModel.goal) {
+                    Picker("Primary Goal", selection: $goal) {
                         ForEach(Goal.allCases, id: \.self) { goal in
                             Text(goal.rawValue.capitalized)
                         }
@@ -54,8 +91,15 @@ struct UserOnboardingView: View {
                 
                 Section {
                     Button("Save Information") {
-                        viewModel.saveUserData()
-                        dismiss()
+                        saveUserData { success, error in
+                            if success {
+                                dismiss()
+                                onComplete()
+                            } else {
+                                // Show error to user
+                                print("Error saving: \(error?.localizedDescription ?? "Unknown error")")
+                            }
+                        }
                     }
                     
                     Button("Skip for Now", role: .destructive) {
@@ -68,15 +112,131 @@ struct UserOnboardingView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Skip") {
-                        dismiss()
+                        onComplete()
                     }
                 }
             }
         }
     }
+    
+    
+    
+    // MARK: - Data Saving
+    private func saveUserData(completion: @escaping (Bool, Error?) -> Void) {
+        // Validate date first
+        guard parseBirthDate() != nil else {
+            completion(false, NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: dobError ?? "Invalid date"]))
+            return
+        }
+        
+        guard let userId = Auth.auth().currentUser?.uid else {
+            completion(false, nil)
+            return
+        }
+        
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+        
+        // Calculate total height in inches
+        let totalHeightInInches = (heightFeet * 12) + heightInches
+        
+        // Prepare data dictionary
+        var data: [String: Any] = [
+            "profileCompleted": true,
+            "lastUpdated": Timestamp(date: Date()),
+            "gender": gender.rawValue,
+            "height": String(totalHeightInInches),
+            "activityLevel": activityLevel.rawValue,
+            "goal": goal.rawValue
+        ]
+        
+        // Add weight if valid
+        if let weightValue = Double(weight) {
+            data["weight"] = String(weightValue)
+        }
+        
+        // Add birth date if valid
+        if let birthDate = parseBirthDate() {
+            data["birthDate"] = Timestamp(date: birthDate)
+            data["age"] = calculateAge(birthDate: birthDate)
+        }
+        
+        // Merge rather than overwrite entire document
+        userRef.setData(data, merge: true) { error in
+            if let error = error {
+                print("Error updating user data: \(error.localizedDescription)")
+                completion(false, error)
+            } else {
+                print("User profile updated successfully")
+                
+                // Update UserViewModel with the new data
+                DispatchQueue.main.async {
+                    let userViewModel = UserViewModel.shared
+                    userViewModel.gender = self.gender.rawValue
+                    userViewModel.height = String(totalHeightInInches)
+                    userViewModel.activityLevel = self.activityLevel.rawValue
+                    userViewModel.goal = self.goal.rawValue
+                    userViewModel.weight = self.weight
+                    userViewModel.dob = self.parseBirthDate()
+                    userViewModel.profileCompletion = 1.0
+                    
+                    // Trigger any necessary recalculations
+                    userViewModel.calculateProfileCompletion()
+                    userViewModel.calculateCaloricIntake()
+                }
+                
+                completion(true, nil)
+            }
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func parseBirthDate() -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yyyy"
+        
+        guard let date = formatter.date(from: birthDateString) else {
+            dobError = "Invalid date format"
+            return nil
+        }
+        
+        // Check if date is in the future
+        if date > Date() {
+            dobError = "Date must be in the past"
+            return nil
+        }
+        
+        dobError = nil
+        return date
+    }
+    
+    private func calculateAge(birthDate: Date) -> Int {
+        Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 0
+    }
+    
+    private func formatBirthDateInput() {
+        // Remove non-numeric characters
+        var cleaned = birthDateString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        // Add slashes for MM/DD/YYYY format
+        if cleaned.count > 2 {
+            cleaned.insert("/", at: cleaned.index(cleaned.startIndex, offsetBy: 2))
+        }
+        if cleaned.count > 5 {
+            cleaned.insert("/", at: cleaned.index(cleaned.startIndex, offsetBy: 5))
+        }
+        
+        // Limit to 10 characters
+        birthDateString = String(cleaned.prefix(10))
+    }
+    
+    private func formatWeightInput() {
+        weight = weight.filter { $0.isNumber || $0 == "." }
+    }
 }
 
-// Supporting Enums and ViewModel
+// Supporting Enums
 enum Gender: String, CaseIterable {
     case male, female, other, preferNotToSay
 }
@@ -103,92 +263,4 @@ enum ActivityLevel: String, CaseIterable, Identifiable {
 
 enum Goal: String, CaseIterable {
     case lose, maintain, gain
-}
-
-class UserOnboardingViewModel: ObservableObject {
-    @Published var gender: Gender = .male
-    @Published var birthDate: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
-    @Published var height: Double?
-    @Published var weight: Double?
-    @Published var activityLevel: ActivityLevel = .moderatelyActive
-    @Published var goal: Goal = .maintain
-    
-    func saveUserData() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        let userRef = db.collection("users").document(userId)
-        
-        var data: [String: Any] = [
-            "gender": gender.rawValue,
-            "birthDate": Timestamp(date: birthDate),
-            "activityLevel": activityLevel.rawValue,
-            "goal": goal.rawValue,
-            "profileCompleted": true
-        ]
-        
-        if let height = height {
-            data["height"] = height
-        }
-        
-        if let weight = weight {
-            data["weight"] = weight
-        }
-        
-        userRef.updateData(data) { error in
-            if let error = error {
-                print("Error updating user data: \(error.localizedDescription)")
-            } else {
-                print("User profile completed successfully")
-                // Calculate and save target calories if needed
-                self.calculateAndSaveTargetCalories()
-            }
-        }
-    }
-    
-    private func calculateAndSaveTargetCalories() {
-        // Implement your calorie calculation logic here
-        // This is just a placeholder example
-        var baseCalories: Double = 2000
-        
-        if let weight = weight {
-            baseCalories += (weight * 10)
-        }
-        
-        if let height = height {
-            baseCalories += (height * 2)
-        }
-        
-        // Adjust for activity level
-        switch activityLevel {
-        case .sedentary: baseCalories *= 1.2
-        case .lightlyActive: baseCalories *= 1.375
-        case .moderatelyActive: baseCalories *= 1.55
-        case .veryActive: baseCalories *= 1.725
-        case .extremelyActive: baseCalories *= 1.9
-        }
-        
-        // Adjust for goal
-        switch goal {
-        case .lose: baseCalories -= 300
-        case .maintain: break
-        case .gain: baseCalories += 300
-        }
-        
-        // Save to Firestore
-        if let userId = Auth.auth().currentUser?.uid {
-            let db = Firestore.firestore()
-            db.collection("users").document(userId).updateData([
-                "targetCalories": baseCalories,
-                "proteinGoal": self.calculateProteinGoal()
-            ])
-        }
-    }
-    
-    private func calculateProteinGoal() -> Double {
-        // Example protein calculation (1.6-2.2g per kg of body weight)
-        guard let weight = weight else { return 0 }
-        let proteinPerKg: Double = goal == .gain ? 2.2 : 1.6
-        return weight * proteinPerKg
-    }
 }

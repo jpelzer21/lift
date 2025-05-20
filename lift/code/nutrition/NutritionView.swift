@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NutritionView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var userViewModel: UserViewModel
     
     @State private var foodsEaten: [FoodItem] = UserDefaultsManager.loadFoods()
@@ -71,44 +72,65 @@ struct NutritionView: View {
                     UserDefaultsManager.saveSelectedTabIndex(newValue)
                 })
     
-                Button("+ Add Food") {
-                    showAddFoodView = true
-                }
-                .padding()
-                .background(Color.pink)
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                Spacer()
-                if foodsEaten.isEmpty {
-                    Text("Add a food by tapping the button above").font(.headline).padding()
+                if !userViewModel.profileCompletion.isEqual(to: 1.0) {
+                    Spacer()
+                    NavigationLink(destination: EditProfileView(userViewModel: userViewModel)) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.yellow)
+                            Text("Complete your profile for accurate nutrition goals")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white)
+                        }
+                        .padding()
+                        .background(Color.pink.opacity(0.9))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    Spacer()
                 } else {
-                    List {
-                        let epsilon = 0.0001
-                        ForEach(foodsEaten.reversed(), id: \.id) { food in
-                            let isWholeNumber = abs(food.servings - round(food.servings)) < epsilon
-                            let formattedServings = isWholeNumber
+                    Button("+ Add Food") {
+                        showAddFoodView = true
+                    }
+                    .padding()
+                    .background(Color.pink)
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    
+                    Spacer()
+                    if foodsEaten.isEmpty {
+                        Text("Add a food by tapping the button above").font(.headline).padding()
+                    } else {
+                        List {
+                            let epsilon = 0.0001
+                            ForEach(foodsEaten.reversed(), id: \.id) { food in
+                                let isWholeNumber = abs(food.servings - round(food.servings)) < epsilon
+                                let formattedServings = isWholeNumber
                                 ? String(format: "%.0f", round(food.servings))
                                 : String(format: "%.1f", food.servings)
-                            
-                            HStack {
-                                Text("\(formattedServings) x ")
-                                Text(food.name)
-                                Spacer()
-                                Text("\(String(format: "%.0f", (food.calories ?? 0.0) * food.servings)) cal")
+                                
+                                HStack {
+                                    Text("\(formattedServings) x ")
+                                    Text(food.name)
+                                    Spacer()
+                                    Text("\(String(format: "%.0f", (food.calories ?? 0.0) * food.servings)) cal")
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedFood = food
+                                    print(food.servings)
+                                    isPopupPresented = true
+                                }
                             }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedFood = food
-                                print(food.servings)
-                                isPopupPresented = true
-                            }
+                            .onDelete(perform: deleteFood)
                         }
-                        .onDelete(perform: deleteFood)
+                        .zIndex(1)
                     }
-                    .zIndex(1)
-                    
+                    Spacer()
                 }
-                Spacer()
             }
             .sheet(isPresented: $showAddFoodView) {
                 AddFoodView(onFoodAdded: addFoodToDailyTotal)
@@ -124,6 +146,9 @@ struct NutritionView: View {
                 selectedTabIndex = UserDefaultsManager.loadSelectedTabIndex()
                 foodsEaten = UserDefaultsManager.loadFoods()
                 recalculateNutrition()
+                
+                // Calculate profile completion when view appears
+                userViewModel.calculateProfileCompletion()
             }
             
             if isPopupPresented, let index = foodsEaten.firstIndex(where: { $0.id == selectedFood?.id }) {
@@ -507,4 +532,14 @@ struct FoodItem: Identifiable, Codable {
     let sugars: Double?
     let imageUrl: String?
     var servings: Double = 1
+}
+
+
+
+
+
+extension Double {
+    func isEqual(to other: Double, tolerance: Double = 0.001) -> Bool {
+        return abs(self - other) < tolerance
+    }
 }

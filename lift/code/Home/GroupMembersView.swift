@@ -43,40 +43,17 @@ struct GroupMembersView: View {
                                             .clipShape(Capsule())
                                     }
                                 }
-                                
-                                if member.role != "admin" {
-                                    Text("Member")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
                             }
                             
                             Spacer()
                             
                             if isAdmin && member.id != currentUserId {
-                                HStack(spacing: 8) {
-                                    if member.role != "admin" {
-                                        Button(action: {
-                                            promoteToAdmin(member)
-                                        }) {
-                                            Text("Make Admin")
-                                                .font(.caption)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.green.opacity(0.15))
-                                                .foregroundColor(.green)
-                                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                                        }
-                                        .disabled(promotingMemberId == member.id)
-                                    }
-                                    
-                                    Button(action: {
-                                        memberToRemove = member
-                                        showConfirmation = true
-                                    }) {
-                                        Image(systemName: "minus.circle.fill")
-                                            .foregroundColor(.red)
-                                    }
+                                Button(action: {
+                                    memberToRemove = member
+                                    showConfirmation = true
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
                                 }
                             }
                         }
@@ -89,7 +66,7 @@ struct GroupMembersView: View {
                                     promoteToAdmin(member)
                                 }
                             } label: {
-                                Label("Make Admin", systemImage: "star.fill")
+                                Label("Make Admin", systemImage: "chevron.up")
                             }
                             .tint(.blue)
                         }
@@ -101,7 +78,7 @@ struct GroupMembersView: View {
                                     demoteToMember(member)
                                 }
                             } label: {
-                                Label("Remove Admin", systemImage: "star.slash.fill")
+                                Label("Remove Admin", systemImage: "chevron.down")
                             }
                             .tint(.red)
                         }

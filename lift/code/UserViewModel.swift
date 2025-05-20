@@ -12,8 +12,11 @@ class UserViewModel: ObservableObject {
     @Published var isLoadingTemplates: Bool = false
     
     // Basic Info
-    @Published var userName: String = "Loading..."
-    @Published var userEmail: String = "Loading..."
+    @Published var userId: String = ""
+    @Published var firstName: String = ""
+    @Published var lastName: String = ""
+    @Published var userName: String = ""
+    @Published var userEmail: String = ""
     @Published var weight: String = "Loading..."
     @Published var height: String = "Loading..."
     @Published var dob: Date?
@@ -41,6 +44,7 @@ class UserViewModel: ObservableObject {
     static let shared = UserViewModel()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
+    
     private var userID: String? {
         Auth.auth().currentUser?.uid
     }
@@ -286,37 +290,63 @@ extension UserViewModel {
     
     // Update the variables that hold the user's information
     private func updateBasicInfo(from data: [String: Any]) {
-        self.userName = data["name"] as? String ?? "No Name"
-        self.userEmail = data["email"] as? String ?? "No Email"
-        self.weight = data["weight"] as? String ?? "0"
-        self.height = data["height"] as? String ?? "0"
-        self.gender = data["gender"] as? String ?? "Not Set"
-        self.activityLevel = data["activityLevel"] as? String ?? "Not Set"
-        self.goal = data["goal"] as? String ?? "Not Set"
-        self.profileURL = data["profileURL"] as? String ?? ""
-//        self.groups = data["groups"] as? [WorkoutGroup] ?? []
-        
-        if let dobTimestamp = data["dob"] as? Timestamp {
-            self.dob = dobTimestamp.dateValue()
-        }
-        
-        if let createdTimestamp = data["createdAt"] as? Timestamp {
-            self.memberSince = createdTimestamp.dateValue()
-        } else {
-            // Fallback to auth creation date
-            if let authDate = Auth.auth().currentUser?.metadata.creationDate {
-                self.memberSince = authDate
+        DispatchQueue.main.async {
+            self.firstName = data["firstName"] as? String ?? ""
+            self.lastName = data["lastName"] as? String ?? ""
+            self.userName = "\(self.firstName) \(self.lastName)"
+            self.userEmail = data["email"] as? String ?? ""
+            
+            // Handle height - both Int and String cases
+            if let heightNumber = data["height"] as? Int {
+                self.height = String(heightNumber)
+            } else if let heightString = data["height"] as? String {
+                self.height = heightString
+            } else {
+                self.height = "0"
             }
+            
+            // Handle weight - both Double and String cases
+            if let weightNumber = data["weight"] as? Double {
+                self.weight = String(weightNumber)
+            } else if let weightString = data["weight"] as? String {
+                self.weight = weightString
+            }
+            
+            self.gender = data["gender"] as? String ?? self.gender
+            self.activityLevel = data["activityLevel"] as? String ?? self.activityLevel
+            self.goal = data["goal"] as? String ?? self.goal
+            
+            if let dobTimestamp = data["birthDate"] as? Timestamp {
+                self.dob = dobTimestamp.dateValue()
+            }
+            
+            self.profileCompletion = (data["profileCompleted"] as? Bool ?? false) ? 1.0 : 0.0
         }
     }
     
-    private func calculateProfileCompletion() {
+    func calculateProfileCompletion() {
+        let requiredFields: [Any?] = [weight, height, dob, gender, activityLevel, goal]
+        let totalFields = requiredFields.count
+        var completedFields = 0
+        
+        for field in requiredFields {
+            if let stringField = field as? String {
+                if !stringField.isEmpty && stringField != "Loading..." {
+                    completedFields += 1
+                }
+            } else if let dateField = field as? Date?, dateField != nil {
+                completedFields += 1
+            }
+        }
+        
+        profileCompletion = Double(completedFields) / Double(totalFields)
     }
     
     // Called on init()
     // Set up listener on user information - name, age, gender, etc
     private func setupRealtimeListener() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
+        
         listener = db.collection("users").document(userID)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
@@ -328,7 +358,10 @@ extension UserViewModel {
                     print("No data received from listener")
                     return
                 }
-                self.updateStats(from: data)
+                
+                // Make sure all properties are being updated
+                self.updateBasicInfo(from: data)
+                self.calculateProfileCompletion()
             }
     }
     
@@ -338,6 +371,9 @@ extension UserViewModel {
 
         DispatchQueue.main.async {
             self.userName = data["name"] as? String ?? self.userName
+//            self.firstName = data["firstName"] as? String ?? "-"
+//            self.lastName = data["lastName"] as? String ?? "-"
+            self.userName = "\(self.firstName) \(self.lastName)"
             self.userEmail = data["email"] as? String ?? self.userEmail
             self.memberSince = (data["createdAt"] as? Timestamp)?.dateValue() ?? self.memberSince
             self.dob = (data["dob"] as? Timestamp)?.dateValue() ?? self.dob
@@ -346,6 +382,7 @@ extension UserViewModel {
             self.height = data["height"] as? String ?? self.height
             self.activityLevel = data["activityLevel"] as? String ?? self.activityLevel
             self.goal = data["goal"] as? String ?? self.goal
+            
 
             // 👇 Only overwrite profileURL if it changed
             if self.profileURL != newProfileURL && !newProfileURL.isEmpty {
@@ -355,12 +392,24 @@ extension UserViewModel {
     }
     
     // Update Methods
-    func updateUserProfile(nameInput: String, emailInput: String, dobInput: Date, genderInput: String,
-                           weightInput: String, heightInput: String, activityLevelInput: String, goalInput: String, profileImageBase64: String?) {
+    func updateUserProfile(
+        firstName: String,
+        lastName: String,
+        emailInput: String,
+        dobInput: Date,
+        genderInput: String,
+        weightInput: String,
+        heightInput: String,
+        activityLevelInput: String,
+        goalInput: String,
+        profileImageBase64: String?
+    ) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
         let userData: [String: Any] = [
-            "name": nameInput,
+            "firstName": firstName,
+            "lastName": lastName,
+            "name": "\(firstName) \(lastName)", // Store combined name if needed
             "email": emailInput,
             "dob": Timestamp(date: dobInput),
             "gender": genderInput,
@@ -368,28 +417,29 @@ extension UserViewModel {
             "height": heightInput,
             "activityLevel": activityLevelInput,
             "goal": goalInput,
-            "profileURL" : profileImageBase64 ?? ""
+            "profileURL": profileImageBase64 ?? ""
         ]
         
-        userName = nameInput
-        userEmail = emailInput
-        weight = weightInput
-        height = heightInput
-        dob = dobInput
-        gender = genderInput
-        activityLevel = activityLevelInput
-        goal = goalInput
-        profileURL = profileImageBase64 ?? ""
-        
+        // Update local properties
+        DispatchQueue.main.async {
+            self.firstName = firstName
+            self.lastName = lastName
+            self.userName = "\(firstName) \(lastName)"
+            self.userEmail = emailInput
+            self.weight = weightInput
+            self.height = heightInput
+            self.dob = dobInput
+            self.gender = genderInput
+            self.activityLevel = activityLevelInput
+            self.goal = goalInput
+            self.profileURL = profileImageBase64 ?? ""
+        }
         
         db.collection("users").document(userID).setData(userData, merge: true) { error in
             if let error = error {
                 print("❌ Profile update failed: \(error.localizedDescription)")
             } else {
-                DispatchQueue.main.async {
-                    self.updateBasicInfo(from: userData)
-                    self.calculateProfileCompletion()
-                }
+                print("✅ Profile updated successfully")
             }
         }
     }
@@ -420,6 +470,69 @@ extension UserViewModel {
                     print(self.workedOutDates)
                 }
             }
+    }
+    
+    
+    func saveUserData(
+        userId: String? = nil,
+        userName: String? = nil,
+        userEmail: String? = nil,
+        weight: String? = nil,
+        height: String? = nil,
+        dob: Date? = nil,
+        gender: String? = nil,
+        activityLevel: String? = nil,
+        goal: String? = nil,
+        profileURL: String? = nil,
+        completion: @escaping (Bool, Error?) -> Void
+    ) {
+        // First update the local published properties with any new values
+        if let userId = userId { self.userId = userId }
+        if let userName = userName { self.userName = userName }
+        if let userEmail = userEmail { self.userEmail = userEmail }
+        if let weight = weight { self.weight = weight }
+        if let height = height { self.height = height }
+        if let dob = dob { self.dob = dob }
+        if let gender = gender { self.gender = gender }
+        if let activityLevel = activityLevel { self.activityLevel = activityLevel }
+        if let goal = goal { self.goal = goal }
+        if let profileURL = profileURL { self.profileURL = profileURL }
+        
+        // Get the actual user ID to use (either passed in or from the current property)
+        let actualUserId = userId ?? self.userId
+        
+        guard !actualUserId.isEmpty else {
+            completion(false, NSError(domain: "UserViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user ID available"]))
+            return
+        }
+        
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(actualUserId)
+        
+        // Prepare the data dictionary with non-nil values
+        var data: [String: Any] = [:]
+        if userName != nil { data["userName"] = self.userName }
+        if userEmail != nil { data["userEmail"] = self.userEmail }
+        if weight != nil { data["weight"] = self.weight }
+        if height != nil { data["height"] = self.height }
+        if dob != nil { data["dob"] = Timestamp(date: self.dob ?? Date()) }
+        if gender != nil { data["gender"] = self.gender }
+        if activityLevel != nil { data["activityLevel"] = self.activityLevel }
+        if goal != nil { data["goal"] = self.goal }
+        if profileURL != nil { data["profileURL"] = self.profileURL }
+        
+        // Add last updated timestamp
+        data["lastUpdated"] = Timestamp(date: Date())
+        
+        userRef.updateData(data) { error in
+            if let error = error {
+                print("Error updating user data: \(error.localizedDescription)")
+                completion(false, error)
+            } else {
+                print("User data updated successfully")
+                completion(true, nil)
+            }
+        }
     }
 }
 
@@ -860,10 +973,8 @@ extension UserViewModel {
     
     func fetchGroupMembers(groupId: String, completion: @escaping ([Member]) -> Void) {
         let groupMembersRef = db.collection("groups").document(groupId).collection("members")
-        
-        groupMembersRef.getDocuments { [weak self] snapshot, error in
-            guard let self = self else { return }
 
+        groupMembersRef.getDocuments { snapshot, error in
             if let error = error {
                 print("❌ Error fetching members for group \(groupId): \(error.localizedDescription)")
                 completion([])
@@ -871,41 +982,20 @@ extension UserViewModel {
             }
 
             let memberDocs = snapshot?.documents ?? []
-            var members: [Member] = []
-            let dispatchGroup = DispatchGroup()
 
-            for doc in memberDocs {
-                dispatchGroup.enter()
+            let members: [Member] = memberDocs.compactMap { doc in
+                let data = doc.data()
                 
-                let userId = doc.documentID
-                let role = doc.data()["role"] as? String ?? "member" // Get role from group membership
-                
-                self.db.collection("users").document(userId).getDocument { userSnapshot, error in
-                    defer { dispatchGroup.leave() }
+                let id = data["userId"] as? String ?? doc.documentID
+                let name = data["name"] as? String ?? "Unknown"
+                let role = data["role"] as? String ?? "member"
+                let profileURLString = data["profileURL"] as? String ?? ""
+                let profileURL = URL(string: profileURLString)
 
-                    guard let userData = userSnapshot?.data(), error == nil else {
-                        print("⚠️ Error fetching user \(userId): \(error?.localizedDescription ?? "Unknown error")")
-                        return
-                    }
-
-                    let name = userData["name"] as? String ?? "Unknown"
-                    let profileURLString = userData["profileURL"] as? String ?? ""
-                    let profileURL = URL(string: profileURLString)
-
-                    let member = Member(
-                        id: userId,
-                        name: name,
-                        profileURL: profileURL,
-                        role: role 
-                    )
-
-                    members.append(member)
-                }
+                return Member(id: id, name: name, profileURL: profileURL, role: role)
             }
 
-            dispatchGroup.notify(queue: .main) {
-                completion(members)
-            }
+            completion(members)
         }
     }
     
@@ -1164,105 +1254,6 @@ extension UserViewModel {
             }
     }
 }
-
-
-
-
-
-
-
-
-// TODO: Create EditExerciseView() for this function
-//    func updateExercise(oldName: String, newName: String, muscleGroups: [String], barType: String, completion: @escaping (Bool) -> Void) {
-//        guard let userID = userID else {
-//            completion(false)
-//            return
-//        }
-//
-//        let db = Firestore.firestore()
-//        let oldRef = db.collection("users").document(userID)
-//            .collection("exercises")
-//            .document(oldName.lowercased().replacingOccurrences(of: " ", with: "_"))
-//
-//        // If name changed, we need to create a new document and delete the old one
-//        if oldName.lowercased() != newName.lowercased() {
-//            let newRef = db.collection("users").document(userID)
-//                .collection("exercises")
-//                .document(newName.lowercased().replacingOccurrences(of: " ", with: "_"))
-//
-//            // Get all sets from old document
-//            oldRef.collection("sets").getDocuments { snapshot, error in
-//                if let error = error {
-//                    print("Error fetching sets: \(error.localizedDescription)")
-//                    completion(false)
-//                    return
-//                }
-//
-//                let batch = db.batch()
-//
-//                // Copy sets to new document
-//                if let documents = snapshot?.documents {
-//                    for document in documents {
-//                        let newSetRef = newRef.collection("sets").document(document.documentID)
-//                        batch.setData(document.data(), forDocument: newSetRef)
-//                    }
-//                }
-//
-//                // Create new exercise document
-//                let exerciseData: [String: Any] = [
-//                    "name": newName,
-//                    "muscleGroups": muscleGroups,
-//                    "barType": barType,
-//                    "lastEdited": FieldValue.serverTimestamp()
-//                ]
-//                batch.setData(exerciseData, forDocument: newRef)
-//
-//                // Delete old exercise document
-//                batch.deleteDocument(oldRef)
-//
-//                batch.commit { error in
-//                    if let error = error {
-//                        print("Error updating exercise: \(error.localizedDescription)")
-//                        completion(false)
-//                    } else {
-//                        // Update local data
-//                        DispatchQueue.main.async {
-//                            if let index = self.userExercises.firstIndex(where: { $0.name == oldName }) {
-//                                self.userExercises[index].name = newName
-//                                self.userExercises[index].muscleGroups = muscleGroups
-//                                self.userExercises[index].barType = barType
-//                            }
-//                        }
-//                        completion(true)
-//                    }
-//                }
-//            }
-//        } else {
-//            // Just update the existing document
-//            let exerciseData: [String: Any] = [
-//                "muscleGroups": muscleGroups,
-//                "barType": barType,
-//                "lastEdited": FieldValue.serverTimestamp()
-//            ]
-//
-//            oldRef.updateData(exerciseData) { error in
-//                if let error = error {
-//                    print("Error updating exercise: \(error.localizedDescription)")
-//                    completion(false)
-//                } else {
-//                    // Update local data
-//                    DispatchQueue.main.async {
-//                        if let index = self.userExercises.firstIndex(where: { $0.name == oldName }) {
-//                            self.userExercises[index].muscleGroups = muscleGroups
-//                            self.userExercises[index].barType = barType
-//                        }
-//                    }
-//                    completion(true)
-//                }
-//            }
-//        }
-//    }
-
 
 
 extension Array {

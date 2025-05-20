@@ -16,49 +16,43 @@ import CryptoKit
 
 struct LoginView: View {
     @Environment(\.colorScheme) var colorScheme
-    
-    @State private var firstName = ""
-    @State private var lastName = ""
-//    @State private var weight = ""
+    @EnvironmentObject private var userViewModel: UserViewModel
+        
     @State private var email = ""
     @State private var password = ""
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var isSignedIn: Bool = false
-    @State private var isRegistering = false // Toggle between Login and Signup
     @State private var authListener: AuthStateDidChangeListenerHandle?
     @State private var currentNonce: String?
-    
-    var body: some View {
-        if isSignedIn {
-            ContentView()
-        } else {
-            content
-        }
-    }
+    @State private var showingRegistration = false
     
     var isLoginDisabled: Bool {
         return email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                password.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty
     }
     
+    var body: some View {
+        if isSignedIn {
+            ContentView()
+        } else {
+            NavigationStack {
+                content
+                    .navigationDestination(isPresented: $showingRegistration) {
+                        RegisterView()
+                    }
+            }
+        }
+    }
+    
     var content: some View {
         VStack {
-            Text(isRegistering ? "Create an Account" : "Welcome Back!")
+            Text("Welcome Back!")
                 .font(.largeTitle)
                 .bold()
                 .padding(.bottom, 20)
-            
-            if isRegistering {
-                TextField("First Name", text: $firstName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.words)
-                    .padding(.horizontal)
-                TextField("Last Name", text: $lastName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.words)
-                    .padding(.horizontal)
-            }
             
             TextField("Email", text: $email)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -77,8 +71,8 @@ struct LoginView: View {
                     .padding()
             }
             
-            Button(action: isRegistering ? register : signIn) {
-                Text(isLoading ? (isRegistering ? "Creating Account..." : "Signing In...") : (isRegistering ? "Sign Up" : "Sign In"))
+            Button(action: signIn) {
+                Text(isLoading ? "Signing In..." : "Sign In")
                     .bold()
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -89,12 +83,6 @@ struct LoginView: View {
             .padding()
             .disabled(isLoginDisabled)
             
-
-            Button(action: { isRegistering.toggle() }) {
-                Text(isRegistering ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                    .foregroundColor(.pink)
-            }
-            
             Divider()
                 .padding(.vertical)
 
@@ -102,7 +90,7 @@ struct LoginView: View {
             Button(action: {
                 Task {
                     if let error = await signInWithGoogle() {
-                        errorMessage = error  // ✅ Correct because errorMessage is a String?
+                        errorMessage = error
                     }
                 }
             }) {
@@ -130,20 +118,23 @@ struct LoginView: View {
             .frame(height: 45)
             .cornerRadius(10)
             
-            // TODO: Apple Sign-In button
             SignInWithAppleButton(
                 onRequest: { request in
-                    print("🔵 Apple onRequest triggered")
                     handleSignInWithAppleRequest(request)
                 },
                 onCompletion: { result in
-                    print("🟢 Apple onCompletion triggered")
                     handleSignInWithAppleCompletion(result)
                 }
             )
             .frame(height: 45)
             .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
             .cornerRadius(10)
+            
+            Button(action: { showingRegistration = true }) {
+                Text("Don't have an account? Sign Up")
+                    .foregroundColor(.pink)
+            }
+            .padding()
         }
         .onAppear {
             authListener = Auth.auth().addStateDidChangeListener { _, user in
@@ -300,30 +291,6 @@ struct LoginView: View {
         }
     }
     
-    // MARK: - Register Function (Stores User Info in Firestore)
-    func register() {
-        print("REGISTER() CALLED")
-        isLoading = true
-        errorMessage = nil
-        Auth.auth().createUser(withEmail: email, password: password) { result, error in
-            self.isLoading = false
-            if let error = error {
-                self.errorMessage = error.localizedDescription
-            } else if let user = result?.user {
-                self.saveUserData(user: user)
-                print("✅ User registered: \(user.email ?? "")")
-
-                // Reset and force fetch user data
-                UserViewModel.shared.resetUserData()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    UserViewModel.shared.fetchUserData()
-                }
-
-                self.isSignedIn = true
-            }
-        }
-    }
-    
     // MARK: - Save User Info to Firestore
     func saveUserData(user: User) {
         let db = Firestore.firestore()
@@ -331,7 +298,6 @@ struct LoginView: View {
             "uid": user.uid,
             "firstName": firstName,
             "lastName": lastName,
-//            "weight": weight,
             "email": user.email ?? "",
             "createdAt": Timestamp(date: Date())
         ]) { error in

@@ -30,7 +30,5 @@
 	<true/>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:1079283597364:ios:bbf427b1eb19e70d398a61</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Your camera can be used to scan food items. </string>
 </dict>
 </plist>
