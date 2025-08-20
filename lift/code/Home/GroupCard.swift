@@ -134,6 +134,7 @@ struct WorkoutGroup: Identifiable {
     var templates: [WorkoutTemplate]
     var members: [Member]
     let everyoneCanEdit: Bool
+    var history: [WorkoutSession]
 }
 
 struct Member: Identifiable {

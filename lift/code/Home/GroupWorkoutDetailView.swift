@@ -1,3 +1,11 @@
+//
+//  GroupWorkoutDetailView.swift
+//  Stat Lab
+//
+//  Created by Josh Pelzer on 8/20/25.
+//
+
+
 import SwiftUI
 
 struct GroupWorkoutDetailView: View {

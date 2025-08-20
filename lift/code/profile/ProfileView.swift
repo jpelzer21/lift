@@ -162,6 +162,11 @@ struct ProfileView: View {
             .padding(.horizontal, cardPadding)
             
             VStack(spacing: 0) {
+                // Support Us
+                NavigationLink(destination: TipView()) {
+                    settingsRow(title: "Support Us", icon: "heart.fill", color: .pink)
+                }
+                
                 // Help & Support
                 NavigationLink(destination: HelpAndSupportView()) {
                     settingsRow(title: "Help & Support", icon: "questionmark.circle.fill", color: .gray)

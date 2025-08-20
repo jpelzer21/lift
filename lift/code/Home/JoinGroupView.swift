@@ -89,14 +89,14 @@ struct JoinGroupView: View {
           .whereField("code", isEqualTo: groupCode.uppercased())
           .limit(to: 1)
           .getDocuments { (snapshot, error) in
-              self.isJoining = false  // Directly reference self
-              
               if let error = error {
+                  self.isJoining = false
                   self.errorMessage = "Error searching for group: \(error.localizedDescription)"
                   return
               }
               
               guard let document = snapshot?.documents.first else {
+                  self.isJoining = false
                   self.errorMessage = "No group found with that code. Check the code and try again."
                   return
               }
@@ -108,51 +108,68 @@ struct JoinGroupView: View {
                   .collection("groups").document(groupId)
               
               userGroupRef.getDocument { (userGroupDoc, error) in
-                  self.isJoining = false
-                  
                   if let error = error {
+                      self.isJoining = false
                       self.errorMessage = "Error checking membership: \(error.localizedDescription)"
                       return
                   }
                   
                   if userGroupDoc?.exists == true {
+                      self.isJoining = false
                       self.errorMessage = "You're already a member of this group."
                       return
                   }
                   
-                  // Use a batch to atomically update both group and user
-                  let batch = db.batch()
-                  
-                  // 1. Update group's member count
-                  batch.updateData([
-                      "memberCount": FieldValue.increment(Int64(1))
-                  ], forDocument: document.reference)
-                  
-                  // 2. Add user to group's members subcollection
-                  let groupMemberRef = document.reference.collection("members").document(userId)
-                  batch.setData([
-                      "userId": userId,
-                      "joinedAt": FieldValue.serverTimestamp(),
-                      "role": "member",
-                      "name": self.name
-                  ], forDocument: groupMemberRef)
-                  
-                  // 3. Add group to user's groups subcollection
-                  batch.setData([
-                      "groupId": groupId,
-                      "joinedAt": FieldValue.serverTimestamp(),
-                      "role": "member",
-                      "groupName": document.data()["name"] as? String ?? ""
-                  ], forDocument: userGroupRef)
-                  
-                  // Commit the batch
-                  batch.commit { error in
-                      self.isJoining = false
-                      
+                  // ✅ Fetch user profile to get the correct name
+                  let userRef = db.collection("users").document(userId)
+                  userRef.getDocument { userSnapshot, error in
                       if let error = error {
-                          self.errorMessage = "Failed to join group: \(error.localizedDescription)"
-                      } else {
-                          self.dismiss()
+                          self.isJoining = false
+                          self.errorMessage = "Error fetching user profile: \(error.localizedDescription)"
+                          return
+                      }
+                      
+                      guard let userData = userSnapshot?.data(),
+                            let fullName = userData["name"] as? String else {
+                          self.isJoining = false
+                          self.errorMessage = "Could not load your profile name."
+                          return
+                      }
+                      
+                      // Use a batch to atomically update both group and user
+                      let batch = db.batch()
+                      
+                      // 1. Update group's member count
+                      batch.updateData([
+                          "memberCount": FieldValue.increment(Int64(1))
+                      ], forDocument: document.reference)
+                      
+                      // 2. Add user to group's members subcollection
+                      let groupMemberRef = document.reference.collection("members").document(userId)
+                      batch.setData([
+                          "userId": userId,
+                          "joinedAt": FieldValue.serverTimestamp(),
+                          "role": "member",
+                          "name": fullName
+                      ], forDocument: groupMemberRef)
+                      
+                      // 3. Add group to user's groups subcollection
+                      batch.setData([
+                          "groupId": groupId,
+                          "joinedAt": FieldValue.serverTimestamp(),
+                          "role": "member",
+                          "groupName": document.data()["name"] as? String ?? ""
+                      ], forDocument: userGroupRef)
+                      
+                      // Commit the batch
+                      batch.commit { error in
+                          self.isJoining = false
+                          
+                          if let error = error {
+                              self.errorMessage = "Failed to join group: \(error.localizedDescription)"
+                          } else {
+                              self.dismiss()
+                          }
                       }
                   }
               }

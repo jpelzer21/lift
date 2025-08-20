@@ -24,7 +24,7 @@ struct GroupMembersView: View {
         NavigationView {
             List {
                 ForEach($members) { $member in
-                    NavigationLink(destination: MemberWorkoutHistoryView(memberId: member.id)) {
+//                    NavigationLink(destination: MemberWorkoutHistoryView(memberId: member.id)) {
                         HStack(spacing: 16) {
                             profileImage(for: member)
                             
@@ -58,7 +58,7 @@ struct GroupMembersView: View {
                             }
                         }
                         .padding(.vertical, 8)
-                    }
+//                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if isAdmin && member.role != "admin" && member.id != currentUserId {
                             Button {

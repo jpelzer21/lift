@@ -14,10 +14,12 @@
 		D72DCD742D8E0E3200E82C8D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D72DCD732D8E0E3200E82C8D /* GoogleSignInSwift */; };
 		D79D2F122D6A40FF00E7976D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = D79D2F112D6A40FF00E7976D /* FirebaseCore */; };
 		D79D2F152D6A41A800E7976D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D79D2F142D6A41A800E7976D /* FirebaseFirestore */; };
+		D7FEB55C2DDE7808004B1681 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7FEB55B2DDE7808004B1681 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D7126E272D68144B00568AA9 /* Stat Lab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Stat Lab.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7FEB55B2DDE7808004B1681 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -49,6 +51,7 @@
 				D7126E592D6A3AF900568AA9 /* FirebaseDatabase in Frameworks */,
 				D7126E522D6A32E900568AA9 /* FirebaseAnalytics in Frameworks */,
 				D72DCD742D8E0E3200E82C8D /* GoogleSignInSwift in Frameworks */,
+				D7FEB55C2DDE7808004B1681 /* StoreKit.framework in Frameworks */,
 				D79D2F122D6A40FF00E7976D /* FirebaseCore in Frameworks */,
 				D79D2F152D6A41A800E7976D /* FirebaseFirestore in Frameworks */,
 				D7126E572D6A3AF900568AA9 /* FirebaseAuth in Frameworks */,
@@ -79,6 +82,7 @@
 		D79D2F132D6A41A800E7976D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D7FEB55B2DDE7808004B1681 /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -452,7 +456,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = jpelz21.lift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -492,7 +496,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = jpelz21.lift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

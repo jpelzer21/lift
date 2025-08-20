@@ -131,45 +131,71 @@ struct GroupDetailView: View {
                 
                 Divider()
                 
-                HStack {
-                    // Templates Section
-                    Text("Templates:")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    Spacer()
-                    if isAdmin || group.everyoneCanEdit {
-                        Button(action: {
-                            showTemplatePicker = true
-                        }) {
-                            Label("Add Templates", systemImage: "plus")
-                                .font(.headline)
-                        }
-                    }
-                }
                 
-                if groupTemplates.isEmpty {
-                    Text("No templates available.")
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                } else {
+                TabView {
+                    // Tab 1: Templates
                     VStack {
-                        ForEach(groupTemplates, id: \.id) {template in
-                            TemplateCard(templateName: template.name,
-                                         exercises: template.exercises,
-                                         showDeleteButton: isAdmin,
-                                         onTap: {
-                                            selectedWorkoutTitle = template.name
-                                            selectedExercises = template.exercises
-                                            showWorkoutView.toggle()
-                                        },
-                                        onDelete: {
-                                            if isAdmin || group.everyoneCanEdit {
-                                                deleteTemplate(template)
-                                            }
-                                        })
+                        HStack {
+                            Text("Templates:")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            if isAdmin || group.everyoneCanEdit {
+                                Button(action: {
+                                    showTemplatePicker = true
+                                }) {
+                                    Label("Add Templates", systemImage: "plus")
+                                        .font(.headline)
+                                }
+                            }
                         }
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 16) {
+                                
+                                
+                                if groupTemplates.isEmpty {
+                                    Text("No templates available.")
+                                        .foregroundColor(.secondary)
+                                        .padding(.top, 4)
+                                } else {
+                                    VStack(spacing: 12) {
+                                        ForEach(groupTemplates, id: \.id) { template in
+                                            TemplateCard(templateName: template.name,
+                                                         exercises: template.exercises,
+                                                         showDeleteButton: isAdmin,
+                                                         onTap: {
+                                                selectedWorkoutTitle = template.name
+                                                selectedExercises = template.exercises
+                                                showWorkoutView.toggle()
+                                            },
+                                                         onDelete: {
+                                                if isAdmin || group.everyoneCanEdit {
+                                                    deleteTemplate(template)
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                        }
+                        .tag(0)
                     }
+                    
+                    // Tab 2: History
+                    VStack {
+                        Text("Workout History")
+                            .font(.headline)
+                            .padding(.bottom, 8)
+
+                        GroupWorkoutHistoryView(groupId: group.id)
+                    }
+                    .tag(1)
+                    .padding()
+                    
                 }
+                .tabViewStyle(.page(indexDisplayMode: .automatic))
+                .frame(height: 500) // adjust as needed so TabView has space
 
                 Divider()
                 

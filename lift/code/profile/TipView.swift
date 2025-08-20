@@ -1,17 +1,10 @@
-//
-//  DonationView.swift
-//  Stat Lab
-//
-//  Created by Josh Pelzer on 5/21/25.
-//
-
-
 import SwiftUI
 import StoreKit
 import Foundation
 
+
 struct TipView: View {
-    @StateObject private var store = TipStore(productID: "com.yourapp.tip5")
+    @StateObject private var tipper = TipManager()
 
     var body: some View {
         VStack(spacing: 24) {
@@ -23,107 +16,76 @@ struct TipView: View {
             Text("Enjoying the app?  Leave a $5 tip to help keep it going!")
                 .multilineTextAlignment(.center)
 
-            Group {
-                switch store.state {
-                case .loading:
-                    ProgressView("Loading…")
-                case .ready(let product):
-                    Button {
-                        store.purchase(product)
-                    } label: {
-                        Text("Tip \(product.displayPrice)")
-                            .font(.headline)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    }
-                case .failed(let errorText):
-                    Text(errorText)
-                        .foregroundColor(.red)
-                }
+            Button {
+                tipper.purchaseTip()
+            } label: {
+                Text("Tip $5")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
             }
-            .padding(.horizontal)
+            .disabled(tipper.isPurchasing)
 
-            if let thanks = store.thankYouText {
-                Text(thanks)
+            if let message = tipper.message {
+                Text(message)
                     .foregroundColor(.green)
                     .multilineTextAlignment(.center)
+                    .padding(.top, 8)
             }
         }
         .padding()
-        .onAppear { store.loadProduct() }
     }
 }
 
 
 
 @MainActor
-final class TipStore: ObservableObject {
-    enum StoreState {
-        case loading
-        case ready(Product)
-        case failed(String)
-    }
+final class TipManager: ObservableObject {
+    @Published var message: String?
+    @Published var isPurchasing = false
 
-    @Published var state: StoreState = .loading
-    @Published var thankYouText: String?
+    private let productID = "jpelz21.lift.tip5"
 
-    private let productID: String
-
-    init(productID: String) {
-        self.productID = productID
-    }
-
-    // MARK: – Load one product
-    func loadProduct() {
+    /// Starts the purchase flow for the $5 tip.
+    func purchaseTip() {
+        isPurchasing = true
         Task {
+            defer { isPurchasing = false }
+
             do {
                 let products = try await Product.products(for: [productID])
+                print("Fetched products: \(products.map(\.id))")  // <--- DEBUG LINE
+
                 guard let product = products.first else {
-                    state = .failed("Product not found.")
+                    message = "Unable to load tip."
                     return
                 }
-                state = .ready(product)
-            } catch {
-                state = .failed("Failed to load product.")
-                print("StoreKit error:", error)
-            }
-        }
-    }
 
-    // MARK: – Purchase
-    func purchase(_ product: Product) {
-        Task {
-            do {
                 let result = try await product.purchase()
 
                 switch result {
                 case .success(let verification):
                     switch verification {
-                    case .verified(_):
-                        thankYouText = "Thanks for the tip! 🎉"
-                    case .unverified(_, _):
-                        print("Transaction could not be verified.")
+                    case .verified:
+                        message = "Thanks for the tip! 🎉"
+                    case .unverified:
+                        message = "Purchase could not be verified."
                     }
 
                 case .userCancelled:
-                    // User closed the sheet—no action needed.
                     break
-
                 case .pending:
-                    // Waiting for approval (e.g., parental controls).
-                    break
-
+                    message = "Purchase is pending approval."
                 @unknown default:
                     break
                 }
             } catch {
-                print("Purchase failed:", error)
+                message = "Something went wrong. Please try again later."
+                print("StoreKit error:", error)
             }
         }
     }
 }
-
-

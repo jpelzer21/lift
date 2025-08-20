@@ -305,6 +305,10 @@ extension UserViewModel {
                 self.height = "0"
             }
             
+            if let createdAt = data["createdAt"] as? Timestamp {
+                self.memberSince = createdAt.dateValue()
+            }
+            
             // Handle weight - both Double and String cases
             if let weightNumber = data["weight"] as? Double {
                 self.weight = String(weightNumber)
@@ -717,45 +721,62 @@ extension UserViewModel {
     // Save the Workout in Firestore
     func saveWorkout(title: String, exercises: [Exercise], completion: @escaping (Error?) -> Void) {
         guard let userID = userID else {
-            completion(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
-            return
-        }
-        var exerciseDetails: [[String: Any]] = []
-        for exercise in exercises {
-            guard !exercise.sets.isEmpty else { continue }
-            if let maxRepSet = exercise.sets.max(by: { $0.reps < $1.reps }) {
-                let exerciseData: [String: Any] = [
-                    "name": exercise.name,
-                    "sets": exercise.sets.count,
-                    "reps": maxRepSet.reps,
-                    "weight": maxRepSet.weight
-                ]
-                exerciseDetails.append(exerciseData)
+                completion(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]))
+                return
             }
-        }
-        guard !exerciseDetails.isEmpty else {
-            completion(NSError(domain: "", code: -2, userInfo: [NSLocalizedDescriptionKey: "No exercises contain sets"]))
-            return
-        }
-        let workoutRef = db.collection("users").document(userID).collection("workouts").document()
-        let batch = db.batch()
-        let workoutData: [String: Any] = [
-            "title": title,
-            "timestamp": Timestamp(date: Date()),
-            "exercises": exerciseDetails
-        ]
-        batch.setData(workoutData, forDocument: workoutRef)
-        let statsRef = db.collection("users").document(userID)
-        let statsData: [String: Any] = [
-            "lastWorkoutDate": Timestamp(date: Date())
-        ]
-        batch.setData(statsData, forDocument: statsRef, merge: true)
-        
-        batch.commit { error in
-            DispatchQueue.main.async {
-                completion(error)
+            
+            var exerciseDetails: [[String: Any]] = []
+            for exercise in exercises {
+                guard !exercise.sets.isEmpty else { continue }
+                if let maxRepSet = exercise.sets.max(by: { $0.reps < $1.reps }) {
+                    let exerciseData: [String: Any] = [
+                        "name": exercise.name,
+                        "sets": exercise.sets.count,
+                        "reps": maxRepSet.reps,
+                        "weight": maxRepSet.weight
+                    ]
+                    exerciseDetails.append(exerciseData)
+                }
             }
-        }
+            
+            guard !exerciseDetails.isEmpty else {
+                completion(NSError(domain: "", code: -2, userInfo: [NSLocalizedDescriptionKey: "No exercises contain sets"]))
+                return
+            }
+            
+            let db = Firestore.firestore()
+            let batch = db.batch()
+            
+            // 1. Save workout under user
+            let workoutRef = db.collection("users").document(userID).collection("workouts").document()
+            let workoutData: [String: Any] = [
+                "title": title,
+                "timestamp": Timestamp(date: Date()),
+                "exercises": exerciseDetails
+            ]
+            batch.setData(workoutData, forDocument: workoutRef)
+            
+            // 2. Update user stats
+            let statsRef = db.collection("users").document(userID)
+            let statsData: [String: Any] = [
+                "lastWorkoutDate": Timestamp(date: Date())
+            ]
+            batch.setData(statsData, forDocument: statsRef, merge: true)
+            
+            // 3. Save to each group’s workout history
+            for group in groups {
+                let groupWorkoutRef = db.collection("groups").document(group.id).collection("workouts").document(workoutRef.documentID)
+                var groupWorkoutData = workoutData
+                groupWorkoutData["userId"] = userID
+                groupWorkoutData["groupId"] = group.id
+                batch.setData(groupWorkoutData, forDocument: groupWorkoutRef)
+            }
+            
+            batch.commit { error in
+                DispatchQueue.main.async {
+                    completion(error)
+                }
+            }
     }
     
     // called on workout finish
@@ -934,6 +955,7 @@ extension UserViewModel {
                             let memberCount = data["memberCount"] as? Int ?? 1
                             let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
                             let everyoneCanEdit = data["everyoneCanEdit"] as? Bool ?? false
+                            
 
                             var workoutGroup = WorkoutGroup(
                                 id: groupId,
@@ -945,7 +967,8 @@ extension UserViewModel {
                                 isAdmin: userRole == "admin",
                                 templates: [],
                                 members: [],
-                                everyoneCanEdit: everyoneCanEdit
+                                everyoneCanEdit: everyoneCanEdit,
+                                history: []
                             )
 
                             dispatchGroup.enter()
@@ -1138,54 +1161,62 @@ extension UserViewModel {
     func calculateCaloricIntake() {
         // Check if all required profile fields are present
         guard let dob = dob,
-              let _ = calculateAge(from: dob),
+              let age = calculateAge(from: dob),
               !weight.isEmpty,
               !height.isEmpty,
               !gender.isEmpty,
               !activityLevel.isEmpty,
               !goal.isEmpty else {
-            // Set to default values if any field is missing
+            // Default values if any field is missing
             goalCalories = 2000
-            goalProtein = 200
-            goalCarbs = 50
-            goalFat = 50
-            goalSugars = 20
+            goalProtein = 150
+            goalCarbs = 200
+            goalFat = 67
             return
         }
         
-        // Calculate values if all fields are present
-        let age = calculateAge(from: dob)!
-        let weightKg = (Double(weight) ?? 160)*0.45359237
-        let heightCm: Double = (Double(height) ?? 70)/0.3937
-        let bmr: Double // basil metabolic rate
+        // Convert inputs to proper units
+        let weightKg = (Double(weight) ?? 70) * 0.45359237 // lbs to kg
+        let heightCm = (Double(height) ?? 170) * 2.54 // inches to cm
+        
+        // Calculate BMR (Mifflin-St Jeor Equation - more accurate than Harris-Benedict)
+        let bmr: Double
         if gender.lowercased() == "male" {
-            bmr = 66 + (13.7 * weightKg) + (5 * heightCm) - (6.8 * Double(age))
+            bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
         } else {
-            bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
+            bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
         }
+        
+        // Activity multiplier
         let activityMultiplier: Double = {
             switch activityLevel.lowercased() {
-                case "sedentary": return 1
-                case "light exercise": return 1.1
-                case "moderate exercise": return 1.2
-                case "heavy exercise": return 1.3
-                case "athlete": return 1.5
-                default: return 1
+            case "sedentary": return 1.2
+            case "light exercise", "lightlyactive": return 1.375
+            case "moderate exercise", "moderatelyactive": return 1.55
+            case "heavy exercise", "veryactive": return 1.725
+            case "athlete", "extraactive": return 1.9
+            default: return 1.2
             }
         }()
+        
+        // Calculate TDEE
         var tdee = bmr * activityMultiplier
+        
+        // Adjust for goal
         switch goal.lowercased() {
-            case "lose weight": tdee -= 300
-            case "maintain weight": break
-            case "gain muscle": tdee += 300
-            default: break
+        case "lose", "weight loss": tdee -= 300 // 500cal deficit for ~1lb/week loss
+        case "maintain", "maintenance": break
+        case "gain", "bulk": tdee += 300 // 500cal surplus for ~1lb/week gain
+        default: break
         }
-        // Update goal variables
-        goalCalories = Int(tdee)
-        goalProtein = Int((Double(weight) ?? 160)*1)
-        goalCarbs = Int((tdee * 0.50) / 4)
-        goalFat = Int((tdee * 0.50) / 9)
-        goalSugars = Int((tdee * 0.10) / 4)  // 10% of carbs allocated to sugar
+        
+        // Macronutrient distribution (40% carbs, 30% protein, 30% fat - balanced approach)
+        goalCalories = Int(tdee.rounded())
+        goalProtein = Int(((tdee * 0.3) / 4).rounded()) // 1g protein = 4 calories
+        goalFat = Int(((tdee * 0.3) / 9).rounded())     // 1g fat = 9 calories
+        goalCarbs = Int(((tdee * 0.4) / 4).rounded())   // 1g carb = 4 calories
+        
+        // Sugar is part of carbs, no need for separate calculation
     }
     
     private func calculateAge(from birthDate: Date) -> Int? {
