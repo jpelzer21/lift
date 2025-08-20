@@ -1,0 +1,60 @@
+func calculateCaloricIntake() {
+    // Check if all required profile fields are present
+    guard let dob = dob,
+          let age = calculateAge(from: dob),
+          !weight.isEmpty,
+          !height.isEmpty,
+          !gender.isEmpty,
+          !activityLevel.isEmpty,
+          !goal.isEmpty else {
+        // Default values if any field is missing
+        goalCalories = 2000
+        goalProtein = 150
+        goalCarbs = 200
+        goalFat = 67
+        return
+    }
+    
+    // Convert inputs to proper units
+    let weightKg = (Double(weight) ?? 70) * 0.45359237 // lbs to kg
+    let heightCm = (Double(height) ?? 170) * 2.54 // inches to cm
+    
+    // Calculate BMR (Mifflin-St Jeor Equation - more accurate than Harris-Benedict)
+    let bmr: Double
+    if gender.lowercased() == "male" {
+        bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
+    } else {
+        bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+    }
+    
+    // Activity multiplier
+    let activityMultiplier: Double = {
+        switch activityLevel.lowercased() {
+        case "sedentary": return 1.2
+        case "light exercise", "lightlyactive": return 1.375
+        case "moderate exercise", "moderatelyactive": return 1.55
+        case "heavy exercise", "veryactive": return 1.725
+        case "athlete", "extraactive": return 1.9
+        default: return 1.2
+        }
+    }()
+    
+    // Calculate TDEE
+    var tdee = bmr * activityMultiplier
+    
+    // Adjust for goal
+    switch goal.lowercased() {
+    case "lose", "weight loss": tdee -= 500 // 500cal deficit for ~1lb/week loss
+    case "maintain", "maintenance": break
+    case "gain", "bulk": tdee += 500 // 500cal surplus for ~1lb/week gain
+    default: break
+    }
+    
+    // Macronutrient distribution (40% carbs, 30% protein, 30% fat - balanced approach)
+    goalCalories = Int(tdee.rounded())
+    goalProtein = Int(((tdee * 0.3) / 4).rounded()) // 1g protein = 4 calories
+    goalFat = Int(((tdee * 0.3) / 9).rounded())     // 1g fat = 9 calories
+    goalCarbs = Int(((tdee * 0.4) / 4).rounded())   // 1g carb = 4 calories
+    
+    // Sugar is part of carbs, no need for separate calculation
+}
