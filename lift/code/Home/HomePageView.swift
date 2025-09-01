@@ -306,7 +306,7 @@ struct MyGroupsView: View {
                 Spacer()
                 Button {
                     print(viewModel.groups.count)
-                    if viewModel.groups.count < 2 {
+                    if viewModel.groups.count < 10 {
                         showJoinGroup = true
                     } else {
                         showGroupLimitAlert = true
@@ -329,7 +329,7 @@ struct MyGroupsView: View {
                 }
 
                 Button {
-                    if viewModel.groups.count < 2 {
+                    if viewModel.groups.count < 10 {
                         showCreateGroup = true
                     } else {
                         showGroupLimitAlert = true
