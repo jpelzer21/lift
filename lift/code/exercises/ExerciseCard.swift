@@ -10,6 +10,7 @@ struct ExerciseCard: View {
     @Environment(\.colorScheme) var colorScheme
     let exerciseName: String
     let setCount: Int?
+    let goal: Double?
     let lastSetDate: Date?
     let isDeleting: Bool
     let deleteAction: () -> Void
@@ -29,6 +30,13 @@ struct ExerciseCard: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                
+                if let value = goal {
+                    Text("Goal: \(Int(value))")
+                } else {
+                    Text("No goal set")
+                }
+                
                 
                 Text("Last: \(formattedDate(lastSetDate))")
                     .font(.caption)

@@ -96,7 +96,7 @@ struct ExerciseListView: View {
                         ForEach(viewModel.exercises, id: \.name) { exercise in
                             NavigationLink(destination: {
                                 if !isDeleting {
-                                    AnyView(GraphView(exerciseName: exercise.name))
+                                    AnyView(GraphView(exerciseName: exercise.name, goalWeight: exercise.goalWeight))
                                 } else {
                                     AnyView(EditExerciseView(exerciseName: exercise.name))
                                 }
@@ -104,6 +104,7 @@ struct ExerciseListView: View {
                                 ExerciseCard(
                                     exerciseName: exercise.name,
                                     setCount: exercise.setCount,
+                                    goal: exercise.goalWeight,
                                     lastSetDate: exercise.lastSetDate,
                                     isDeleting: isDeleting,
                                     deleteAction: {

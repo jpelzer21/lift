@@ -6,14 +6,17 @@ import FirebaseAuth
 struct GraphView: View {
 //    @State private var viewModel: ExerciseViewModel
     @State private var exerciseSets: [ExerciseSet] = []
-    @State private var selectedMetric: Metric = .volume
+    @State private var selectedMetric: Metric = .weight
     @State private var isLoading = true
     @State private var showInfo = false
     @State private var showEditExerciseView = false
     @State private var showFirstSets: Bool = true
     
+//    let goalWeight: Double = 225
+    
     @State private var barType: String = ""
-    let exerciseName: String // name passed through
+    let exerciseName: String // name passed through --> find in database from name
+    let goalWeight: Double?
     
     @State private var listener: ListenerRegistration?
     
@@ -56,13 +59,21 @@ struct GraphView: View {
     
     // find max number of sets
     private var maxSetsInSession: Int {
-        let sessionSets = Dictionary(grouping: exerciseSets, by: { Calendar.current.startOfDay(for: $0.date) })
-            .mapValues { $0.count }
-        return sessionSets.values.max() ?? 0
+        let grouped: [Date: [ExerciseSet]] = Dictionary(grouping: exerciseSets, by: { (set: ExerciseSet) -> Date in
+            Calendar.current.startOfDay(for: set.date)
+        })
+        let counts: [Date: Int] = grouped.mapValues { (sets: [ExerciseSet]) -> Int in
+            sets.count
+        }
+        let maxCount: Int = counts.values.max() ?? 0
+        return maxCount
     }
 
     var body: some View {
-        let firstSets = exerciseSets.filter { $0.number == 1 }
+        let firstSets: [ExerciseSet] = exerciseSets.filter { (set: ExerciseSet) -> Bool in
+            set.number == 1
+        }
+        let exerciseGoalWeight: Double = goalWeight ?? 0
 //        let lastSets = exerciseSets.filter { set in
 //            let maxSetNumber = exerciseSets.max(by: { $0.number < $1.number })?.number ?? 0
 //            return set.number == maxSetNumber
@@ -85,14 +96,14 @@ struct GraphView: View {
                     .padding(.horizontal, 20)
                     
                     HStack {
-//                        Button(action: {
-//                            showEditExerciseView = true
-//                        }) {
-//                            Image(systemName: "pencil")
-//                                .font(.title2)
-//                                .foregroundColor(.blue)
-//                        }
-//                        .padding(.horizontal, 20)
+                        Button(action: {
+                            showEditExerciseView = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal, 20)
                         Spacer()
                         Button(action: {
                             showInfo = true
@@ -127,19 +138,18 @@ struct GraphView: View {
                     } else {
                         if firstSets.count > 1 {
                             Chart {
+                                //dot for each set
                                 ForEach(exerciseSets) { set in
                                     PointMark(
                                         x: .value("Date", set.date),
-                                        y: .value(selectedMetric.rawValue,
-                                                  selectedMetric == .weight ? set.weight :
-                                                    selectedMetric == .reps ? Double(set.reps) :
-                                                    set.weight * Double(set.reps))
+                                        y: .value(selectedMetric.rawValue, metricValue(for: set))
                                     )
                                     .symbol(.circle)
                                     .opacity(1/Double(set.number))
                                     .foregroundStyle(Color.pink)
                                 }
                                 
+                                //line connects each first set
                                 ForEach(Array(firstSets.enumerated()), id: \.element.id) { index, set in
                                     LineMark(
                                         x: .value("Date", set.date),
@@ -148,6 +158,14 @@ struct GraphView: View {
                                     .foregroundStyle(Color.pink)
                                     .lineStyle(StrokeStyle(lineWidth: 2))
                                 }
+                                
+                                //goal weight
+                                if (selectedMetric == .weight && exerciseGoalWeight > 0) {
+                                    RuleMark(y: .value("Goal Weight", exerciseGoalWeight))
+                                        .foregroundStyle(.blue)
+                                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5,5]))
+                                }
+                                
                             }
                             .chartXAxis {
                                 AxisMarks(position: .bottom) {
@@ -185,15 +203,28 @@ struct GraphView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    HStack {
-                        Text("1 Rep Max:")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(oneRepMax > 0 ? "\(Int(oneRepMax))lbs" : "N/A")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                    
+                    
+//                    HStack {
+//                        Text("1 Rep Max:")
+//                            .font(.headline)
+//                            .foregroundColor(.primary)
+//                        Spacer()
+//                        Text(oneRepMax > 0 ? "\(Int(oneRepMax))lbs" : "N/A")
+//                            .font(.subheadline)
+//                            .foregroundColor(.secondary)
+//                    }
+//                    
+//                    HStack {
+//                        Text("Goal")
+//                        Text("\(Int(exerciseGoalWeight)) lbs")
+//                            .fontWeight(.medium)
+//                    }
+//                    .font(.caption)
+//                    .foregroundColor(.secondary)
+//                    .padding(.leading, 2)
+                    
+                    
                     
                     HStack {
                         Text("Best Set:")
@@ -214,6 +245,26 @@ struct GraphView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text("1 Rep Max:")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(oneRepMax > 0 ? "\(Int(oneRepMax))lbs" : "N/A")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        HStack {
+                            Spacer()
+                            Text("Goal: \(Int(exerciseGoalWeight)) lbs")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 2)
+                        }
+                    }
+                    
                 }
                 .padding()
             }
@@ -336,7 +387,7 @@ struct GraphInfoView: View {
                 .font(.title)
                 .bold()
             
-            Text("**Dots** represent individual sets, with opacity decreasing for later sets in the same session.\n\n**Line** represents the trend of first sets in each session.\n\n **Y-Axis** depends on the selected metric: Weight, Reps, or Volume (Weight × Reps).")
+            Text("**Dots** represent individual sets.\n\n**Line** represents the trend of the first set in each session.\n\n **Y-Axis** depends on the selected metric: Weight, Reps, or Volume (Weight × Reps).\n\nAdd your goal weight by pressing the \(Image(systemName: "pencil")).")
                 .font(.body)
                 .multilineTextAlignment(.leading)
                 .padding()
@@ -351,3 +402,4 @@ struct GraphInfoView: View {
         .padding()
     }
 }
+

@@ -1069,9 +1069,11 @@ extension UserViewModel {
         let heightCm: Double = (Double(height) ?? 70)/0.3937
         let bmr: Double // basil metabolic rate
         if gender.lowercased() == "male" {
-            bmr = 66 + (13.7 * weightKg) + (5 * heightCm) - (6.8 * Double(age))
+            bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
+//            bmr = 66 + (13.7 * weightKg) + (5 * heightCm) - (6.8 * Double(age))
         } else {
-            bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
+            bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+//            bmr = 655 + (9.6 * weightKg) + (1.8 * heightCm) - (4.7 * Double(age))
         }
         let activityMultiplier: Double = {
             switch activityLevel.lowercased() {
@@ -1085,14 +1087,14 @@ extension UserViewModel {
         }()
         var tdee = bmr * activityMultiplier
         switch goal.lowercased() {
-            case "lose weight": tdee -= 300
+        case "lose weight": tdee *= 0.9
             case "maintain weight": break
-            case "gain muscle": tdee += 300
+        case "gain muscle": tdee *= 1.1
             default: break
         }
         // Update goal variables
         goalCalories = Int(tdee)
-        goalProtein = Int((Double(weight) ?? 160)*1)
+        goalProtein = Int(weightKg * 1.5)
         goalCarbs = Int((tdee * 0.50) / 4)
         goalFat = Int((tdee * 0.50) / 9)
         goalSugars = Int((tdee * 0.10) / 4)  // 10% of carbs allocated to sugar

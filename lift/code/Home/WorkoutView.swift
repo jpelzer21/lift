@@ -515,6 +515,7 @@ struct Exercise: Identifiable, Codable {
     var createdAt: Date = Date()
     var setCount: Int = 0
     var allSetsCompleted: Bool = false
+    var goalWeight: Double?
 }
 
 

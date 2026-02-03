@@ -13,6 +13,9 @@ struct EditExerciseView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var showingAlert: Bool = false
+    @State private var goalWeight: String = ""
+    @State private var fetchedGoalWeight: Double? = nil
+
 
     let muscleGroups = ["Chest", "Back", "Quads", "Hamstrings", "Glutes", "Shoulders", "Triceps", "Biceps", "Core", "Other"]
     let barTypeOptions = ["Other", "Barbell", "Dumbbells", "Cable", "EZ-Bar", "Trap-Bar", "Kettlebell", "Machine", "BodyWeight"]
@@ -25,10 +28,10 @@ struct EditExerciseView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        TextField("Exercise Name", text: .constant(exerciseName)) // uneditable
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .padding(.horizontal)
-                            .padding(.top, 10)
+//                        TextField("Exercise Name", text: .constant(exerciseName)) // uneditable
+//                            .textFieldStyle(RoundedBorderTextFieldStyle())
+//                            .padding(.horizontal)
+//                            .padding(.top, 10)
 
                         VStack(alignment: .leading) {
                             Text("Select Bar Type:")
@@ -40,6 +43,17 @@ struct EditExerciseView: View {
                                 }
                             }
                             .pickerStyle(MenuPickerStyle())
+                        }
+                        .padding(.horizontal)
+                        
+                        VStack(alignment: .leading) {
+                            Text("Goal Weight:")
+                                .font(.headline)
+                            TextField(fetchedGoalWeight != nil ? "\(Int(fetchedGoalWeight!))" : "What is your goal weight", text: $goalWeight)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .padding(.horizontal)
+                                .padding(.top, 10)
                         }
                         .padding(.horizontal)
 
@@ -87,7 +101,7 @@ struct EditExerciseView: View {
                     }
                     .padding(.bottom, 50)
                 }
-                .navigationTitle("Edit Exercise")
+                .navigationTitle("Edit \(exerciseName)")
                 .alert(isPresented: $showingAlert) {
                     Alert(title: Text("Error"), message: Text("message"), dismissButton: .default(Text("OK")))
                 }
@@ -136,7 +150,16 @@ struct EditExerciseView: View {
                 let data = document.data()
                 self.documentID = document.documentID
                 self.barType = data["barType"] as? String ?? "Other"
-                self.selectedMuscleGroups = data["muscleGroups"] as? [String] ?? []
+                self.selectedMuscleGroups = data["muscleGroups"] as? [String] ?? []                
+                
+                if let goal = data["goalWeight"] as? Double {
+                    self.fetchedGoalWeight = goal
+                    if self.goalWeight.isEmpty { self.goalWeight = String(Int(goal)) }
+                } else if let goalInt = data["goalWeight"] as? Int {
+                    let goalDouble = Double(goalInt)
+                    self.fetchedGoalWeight = goalDouble
+                    if self.goalWeight.isEmpty { self.goalWeight = String(goalInt) }
+                }
                 self.isLoading = false
             }
     }
@@ -151,12 +174,15 @@ struct EditExerciseView: View {
         let db = Firestore.firestore()
         let exerciseRef = db.collection("users").document(userID).collection("exercises").document(documentID)
 
-        let updatedFields: [String: Any] = [
+        var updatedFields: [String: Any] = [
             "barType": barType,
             "muscleGroups": selectedMuscleGroups,
             "updatedAt": Timestamp(date: Date()),
-            "test": "test"
+            "goalWeight": goalWeight
         ]
+        if let goalValue = Double(goalWeight) {
+            updatedFields["goalWeight"] = goalValue
+        }
 
         exerciseRef.updateData(updatedFields) { error in
             if let error = error {
@@ -164,6 +190,9 @@ struct EditExerciseView: View {
             } else {
                 print("✅ Exercise updated.")
                 print("\(updatedFields)")
+                if let goalValue = Double(self.goalWeight) {
+                    self.fetchedGoalWeight = goalValue
+                }
                 presentationMode.wrappedValue.dismiss()
             }
         }

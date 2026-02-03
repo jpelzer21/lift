@@ -208,7 +208,7 @@ struct MyTemplatesView: View {
                 }
 
                 Button {
-                    if viewModel.templates.count < 5 {
+                    if viewModel.templates.count <= 7 {
                         selectedWorkoutTitle = "New Template"
                         selectedExercises = []
                         showWorkoutView.toggle()
@@ -306,7 +306,7 @@ struct MyGroupsView: View {
                 Spacer()
                 Button {
                     print(viewModel.groups.count)
-                    if viewModel.groups.count < 2 {
+                    if viewModel.groups.count < 5 {
                         showJoinGroup = true
                     } else {
                         showGroupLimitAlert = true

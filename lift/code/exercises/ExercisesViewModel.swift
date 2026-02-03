@@ -11,7 +11,7 @@ import FirebaseAuth
 import SwiftUI
 
 class ExercisesViewModel: ObservableObject {
-    @Published var exercises: [(name: String, setCount: Int?, lastSetDate: Date?)] = []
+    @Published var exercises: [(name: String, setCount: Int?, lastSetDate: Date?, goalWeight: Double?)] = []
     @Published var isLoading = true
     @Published var selectedSortOption: String = "A-Z"
 
@@ -57,8 +57,9 @@ class ExercisesViewModel: ObservableObject {
                         let setCount = doc.data()["setCount"] as? Int
                         let lastSetTimestamp = doc.data()["lastSetDate"] as? Timestamp
                         let lastSetDate = lastSetTimestamp?.dateValue()
+                        let goalWeight = doc.data()["goalWeight"] as? Double
                         
-                        return (name: name, setCount: setCount, lastSetDate: lastSetDate)
+                        return (name: name, setCount: setCount, lastSetDate: lastSetDate, goalWeight)
                     } ?? []
                 }
             }
