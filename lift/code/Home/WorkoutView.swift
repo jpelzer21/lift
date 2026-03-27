@@ -20,6 +20,10 @@ struct WorkoutView: View {
     @State private var isReordering = false
     @State private var draggedExercise: Exercise?
     @State private var dragOverIndex: Int?
+    @State private var restSecondsRemaining = 0
+    @State private var restTimer: Timer?
+    @State private var restSecondsRemaining = 0
+    @State private var restTimer: Timer?
 
     private let db = Firestore.firestore()
     var onFinish: (() -> Void)? = nil
@@ -49,6 +53,8 @@ struct WorkoutView: View {
                                         isEditingTitle = true
                                     }
                             }
+                            
+                            restTimerCard
                             
                             VStack {
                                 ForEach(exercises.indices, id: \.self) { index in
@@ -306,6 +312,56 @@ struct WorkoutView: View {
                     print("Template loaded successfully")
                 }
             }
+        }
+
+        private var restTimerCard: some View {
+            VStack(spacing: 10) {
+                Text(restSecondsRemaining > 0 ? "Rest: \(formatTime(restSecondsRemaining))" : "Rest Timer")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+
+                HStack(spacing: 10) {
+                    Button("1:00") { startRestTimer(seconds: 60) }
+                    Button("1:30") { startRestTimer(seconds: 90) }
+                    Button("2:00") { startRestTimer(seconds: 120) }
+                    Button(restSecondsRemaining > 0 ? "Stop" : "Reset") {
+                        stopRestTimer()
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.gray.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 8)
+        }
+
+        private func startRestTimer(seconds: Int) {
+            stopRestTimer()
+            restSecondsRemaining = seconds
+            restTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+                DispatchQueue.main.async {
+                    if self.restSecondsRemaining > 0 {
+                        self.restSecondsRemaining -= 1
+                    } else {
+                        timer.invalidate()
+                        self.restTimer = nil
+                    }
+                }
+            }
+        }
+
+        private func stopRestTimer() {
+            restTimer?.invalidate()
+            restTimer = nil
+            restSecondsRemaining = 0
+        }
+
+        private func formatTime(_ totalSeconds: Int) -> String {
+            let minutes = totalSeconds / 60
+            let seconds = totalSeconds % 60
+            return String(format: "%d:%02d", minutes, seconds)
         }
 }
 

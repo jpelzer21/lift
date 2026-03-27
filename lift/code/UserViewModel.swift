@@ -2,7 +2,12 @@ import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
 
-class UserViewModel: ObservableObject {
+final class UserViewModel: ObservableObject {
+    
+    private enum Placeholder {
+        static let loading = "Loading..."
+        static let emptyNumeric = "0"
+    }
     
     // Template Info
     @Published var templates: [WorkoutTemplate] = []
@@ -17,12 +22,12 @@ class UserViewModel: ObservableObject {
     @Published var lastName: String = ""
     @Published var userName: String = ""
     @Published var userEmail: String = ""
-    @Published var weight: String = "Loading..."
-    @Published var height: String = "Loading..."
+    @Published var weight: String = Placeholder.loading
+    @Published var height: String = Placeholder.loading
     @Published var dob: Date?
-    @Published var gender: String = "Loading..."
-    @Published var activityLevel: String = "Loading..."
-    @Published var goal: String = "Loading..."
+    @Published var gender: String = Placeholder.loading
+    @Published var activityLevel: String = Placeholder.loading
+    @Published var goal: String = Placeholder.loading
     @Published var profileURL: String?
     
     // Calulated Nutrition Info
@@ -44,11 +49,23 @@ class UserViewModel: ObservableObject {
     static let shared = UserViewModel()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
+    private var customFoodsListener: ListenerRegistration?
     
     private var userID: String? {
         Auth.auth().currentUser?.uid
     }
     private var authStateListener: AuthStateDidChangeListenerHandle?
+
+    private func applyLoadingPlaceholders() {
+        userName = Placeholder.loading
+        userEmail = Placeholder.loading
+        weight = Placeholder.loading
+        height = Placeholder.loading
+        dob = nil
+        gender = Placeholder.loading
+        activityLevel = Placeholder.loading
+        goal = Placeholder.loading
+    }
 
     deinit {
         // Remove auth listener
@@ -56,6 +73,7 @@ class UserViewModel: ObservableObject {
             Auth.auth().removeStateDidChangeListener(listener)
         }
         listener?.remove()
+        customFoodsListener?.remove()
     }
     
     init() {
@@ -101,28 +119,26 @@ class UserViewModel: ObservableObject {
     
     // Reset User Data
     func resetUserData() {
-        // Cancel any active listeners
         listener?.remove()
-        // Reset all published properties
+        customFoodsListener?.remove()
         DispatchQueue.main.async {
             self.templates = []
+            self.groups = []
+            self.userExercises = []
+            self.customFoods = []
+            self.workedOutDates = []
             self.isLoading = false
-            self.userName = "Loading..."
-            self.userEmail = "Loading..."
-            self.weight = "Loading..."
-            self.dob = nil
-            self.gender = "Loading..."
-            self.activityLevel = "Loading..."
-            self.goal = "Loading..."
+            self.isLoadingGroups = false
+            self.isLoadingTemplates = false
             self.memberSince = Date()
             self.profileCompletion = 0
-            self.userExercises = []
+            self.applyLoadingPlaceholders()
         }
     }
 }
 
 
-// Initialize all important variables
+// MARK: - Initial Data Loading
 extension UserViewModel {
     func batchFetchInitialData(completion: @escaping (Error?) -> Void) {
         guard let userID = userID else {
@@ -226,10 +242,11 @@ extension UserViewModel {
 //            dispatchGroup.leave()
 //        }
         
-        // 8. Fetch user's group IDs and group deatils
+        // 8. Fetch user's group IDs and group details
         dispatchGroup.enter()
-        fetchUserGroups()
-        dispatchGroup.leave()
+        fetchUserGroups {
+            dispatchGroup.leave()
+        }
         
         
         // 9. Process all results when complete
@@ -266,14 +283,13 @@ extension UserViewModel {
 
 
 
-// MARK: User Information Manegement
+// MARK: - User Information Management
 extension UserViewModel {
     
-    // Getting the data about the user - name, age, gender, etc
+    // Fetch basic user profile data.
     func fetchUserData() {
-        guard let user = Auth.auth().currentUser else { return }
-        let userRef = db.collection("users").document(user.uid)
-        // Fetch basic user data
+        guard let userID = userID else { return }
+        let userRef = db.collection("users").document(userID)
         userRef.getDocument { [weak self] snapshot, error in
             guard let self = self else { return }
             if let error = error {
@@ -288,15 +304,16 @@ extension UserViewModel {
         }
     }
     
-    // Update the variables that hold the user's information
+    // Update local profile fields from Firestore user data.
     private func updateBasicInfo(from data: [String: Any]) {
         DispatchQueue.main.async {
             self.firstName = data["firstName"] as? String ?? ""
             self.lastName = data["lastName"] as? String ?? ""
-            self.userName = "\(self.firstName) \(self.lastName)"
+            let combinedName = "\(self.firstName) \(self.lastName)".trimmingCharacters(in: .whitespaces)
+            self.userName = combinedName.isEmpty ? (data["name"] as? String ?? "") : combinedName
             self.userEmail = data["email"] as? String ?? ""
             
-            // Handle height - both Int and String cases
+            // Handle height stored as either Int or String.
             if let heightNumber = data["height"] as? Int {
                 self.height = String(heightNumber)
             } else if let heightString = data["height"] as? String {
@@ -309,7 +326,7 @@ extension UserViewModel {
                 self.memberSince = createdAt.dateValue()
             }
             
-            // Handle weight - both Double and String cases
+            // Handle weight stored as either Double or String.
             if let weightNumber = data["weight"] as? Double {
                 self.weight = String(weightNumber)
             } else if let weightString = data["weight"] as? String {
@@ -374,10 +391,20 @@ extension UserViewModel {
         let newProfileURL = data["profileURL"] as? String ?? ""
 
         DispatchQueue.main.async {
-            self.userName = data["name"] as? String ?? self.userName
-//            self.firstName = data["firstName"] as? String ?? "-"
-//            self.lastName = data["lastName"] as? String ?? "-"
-            self.userName = "\(self.firstName) \(self.lastName)"
+            let fetchedFirstName = data["firstName"] as? String
+            let fetchedLastName = data["lastName"] as? String
+            if let fetchedFirstName { self.firstName = fetchedFirstName }
+            if let fetchedLastName { self.lastName = fetchedLastName }
+
+            if let fetchedName = data["name"] as? String, !fetchedName.isEmpty {
+                self.userName = fetchedName
+            } else {
+                let combinedName = "\(self.firstName) \(self.lastName)".trimmingCharacters(in: .whitespaces)
+                if !combinedName.isEmpty {
+                    self.userName = combinedName
+                }
+            }
+
             self.userEmail = data["email"] as? String ?? self.userEmail
             self.memberSince = (data["createdAt"] as? Timestamp)?.dateValue() ?? self.memberSince
             self.dob = (data["dob"] as? Timestamp)?.dateValue() ?? self.dob
@@ -515,8 +542,8 @@ extension UserViewModel {
         
         // Prepare the data dictionary with non-nil values
         var data: [String: Any] = [:]
-        if userName != nil { data["userName"] = self.userName }
-        if userEmail != nil { data["userEmail"] = self.userEmail }
+        if userName != nil { data["name"] = self.userName }
+        if userEmail != nil { data["email"] = self.userEmail }
         if weight != nil { data["weight"] = self.weight }
         if height != nil { data["height"] = self.height }
         if dob != nil { data["dob"] = Timestamp(date: self.dob ?? Date()) }
@@ -545,7 +572,7 @@ extension UserViewModel {
 
 
 
-// MARK: Workout Information Manegement
+// MARK: - Workout Information Management
 extension UserViewModel {
     // Fetch templates from database
     func fetchTemplatesRealtime() {
@@ -883,8 +910,7 @@ extension UserViewModel {
     }
     
     func fetchUserExercises() {
-        guard let userID = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
+        guard let userID = userID else { return }
         db.collection("users").document(userID).collection("exercises")
             .getDocuments { snapshot, error in
                 if let error = error {
@@ -899,10 +925,11 @@ extension UserViewModel {
             }
     }
     
-    func fetchUserGroups() {
+    func fetchUserGroups(completion: (() -> Void)? = nil) {
         self.isLoadingGroups = true
-        guard let userID = Auth.auth().currentUser?.uid else {
+        guard let userID = userID else {
             print("User not authenticated")
+            completion?()
             return
         }
         
@@ -912,6 +939,8 @@ extension UserViewModel {
                 
                 if let error = error {
                     print("❌ Error fetching user's groups: \(error.localizedDescription)")
+                    self.isLoadingGroups = false
+                    completion?()
                     return
                 }
                 
@@ -925,6 +954,7 @@ extension UserViewModel {
                 guard !userGroups.isEmpty else {
                     self.groups = []
                     self.isLoadingGroups = false
+                    completion?()
                     return
                 }
                 
@@ -937,6 +967,8 @@ extension UserViewModel {
 
                         if let error = error {
                             print("❌ Error fetching group details: \(error.localizedDescription)")
+                            self.isLoadingGroups = false
+                            completion?()
                             return
                         }
 
@@ -955,7 +987,6 @@ extension UserViewModel {
                             let memberCount = data["memberCount"] as? Int ?? 1
                             let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
                             let everyoneCanEdit = data["everyoneCanEdit"] as? Bool ?? false
-                            
 
                             var workoutGroup = WorkoutGroup(
                                 id: groupId,
@@ -971,15 +1002,22 @@ extension UserViewModel {
                                 history: []
                             )
 
-                            dispatchGroup.enter()
+                            let groupBuildDispatchGroup = DispatchGroup()
+
+                            groupBuildDispatchGroup.enter()
                             self.fetchGroupTemplates(for: groupId) { templates in
                                 workoutGroup.templates = templates
-                                dispatchGroup.leave()
+                                groupBuildDispatchGroup.leave()
+                            }
+
+                            groupBuildDispatchGroup.enter()
+                            self.fetchGroupMembers(groupId: groupId) { members in
+                                workoutGroup.members = members
+                                groupBuildDispatchGroup.leave()
                             }
 
                             dispatchGroup.enter()
-                            self.fetchGroupMembers(groupId: groupId) { members in
-                                workoutGroup.members = members
+                            groupBuildDispatchGroup.notify(queue: .main) {
                                 fetchedGroups.append(workoutGroup)
                                 dispatchGroup.leave()
                             }
@@ -988,6 +1026,7 @@ extension UserViewModel {
                         dispatchGroup.notify(queue: .main) {
                             self.groups = fetchedGroups
                             self.isLoadingGroups = false
+                            completion?()
                         }
                     }
                 
@@ -1156,7 +1195,7 @@ extension UserViewModel {
 
 
 
-// MARK: - Food Management
+// MARK: - Nutrition and Food Management
 extension UserViewModel {
     func calculateCaloricIntake() {
         // Check if all required profile fields are present
@@ -1244,13 +1283,15 @@ extension UserViewModel {
             completion(.failure(error))
         }
     }
-    // Firestore Listener for Real-time Custom Food Updates
+    // Firestore listener for real-time custom food updates.
     func startListeningForCustomFoods() {
         guard let userID = userID else { return }
-        
-        db.collection("users").document(userID)
+
+        customFoodsListener?.remove()
+        customFoodsListener = db.collection("users").document(userID)
             .collection("customFoods")
-            .addSnapshotListener { snapshot, error in
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
                 if let error = error {
                     print("Error fetching custom foods: \(error.localizedDescription)")
                     return
@@ -1286,9 +1327,9 @@ extension UserViewModel {
     }
 }
 
-
 extension Array {
     func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [self] }
         return stride(from: 0, to: count, by: size).map {
             Array(self[$0..<Swift.min($0 + size, count)])
         }
