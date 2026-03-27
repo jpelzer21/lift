@@ -22,8 +22,6 @@ struct WorkoutView: View {
     @State private var dragOverIndex: Int?
     @State private var restSecondsRemaining = 0
     @State private var restTimer: Timer?
-    @State private var restSecondsRemaining = 0
-    @State private var restTimer: Timer?
 
     private let db = Firestore.firestore()
     var onFinish: (() -> Void)? = nil
